@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PatternGen</title>
+    <style>
+      :root {
+        --bg: #000;
+        --fg: #e0e0e0;
+        --fg-strong: #ffffff;
+        --muted: #888;
+        --muted-2: #666;
+        --muted-3: #444;
+        --btn: #888;
+        --canvas-bg: #323232;
+        --canvas-frame: transparent;
+        --tile-on: #ffffff;
+        --tile-off: #404040;
+        --swatch-dot: #1a1a1a;
+        --bar-filled: #ccc;
+        --bar-empty: #333;
+        --scrub-thumb: #ffffff;
+        --track-light: #444;
+        --track-mid: #555;
+        --track-dark: #333;
+        --input-underline: #444;
+        --input-text: #ccc;
+        --ms-label: #444;
+        --hint: #333;
+      }
+
+      :root[data-theme='light'] {
+        --bg: #f0f0f0;
+        --fg: #1a1a1a;
+        --fg-strong: #000;
+        --muted: #666;
+        --muted-2: #888;
+        --muted-3: #bbb;
+        --btn: #000;
+        --canvas-bg: #323232;
+        --canvas-frame: transparent;
+        --tile-on: #1a1a1a;
+        --tile-off: #c0c0c0;
+        --swatch-dot: #1a1a1a;
+        --bar-filled: #333;
+        --bar-empty: #ccc;
+        --scrub-thumb: #000;
+        --track-light: #bbb;
+        --track-mid: #aaa;
+        --track-dark: #ddd;
+        --input-underline: #bbb;
+        --input-text: #333;
+        --ms-label: #bbb;
+        --hint: #999;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+      }
+
+      input[type='text'].auto-input, input[type='number'].auto-input {
+        field-sizing: content;
+        min-inline-size: 5ch;
+        background: none;
+        border: none;
+        border-bottom: 4px solid var(--input-underline);
+        border-radius: 0;
+        color: var(--input-text);
+        padding: 2px 0;
+        font-size: 22px;
+        font-weight: 600;
+        font-family: inherit;
+        outline: none;
+      }
+      input[type='number'].auto-input { text-align: right; }
+
+      .bar-step {
+        transition:
+          background 220ms cubic-bezier(0.4, 0, 0.2, 1),
+          transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+          filter 180ms ease;
+        transform-origin: center;
+        will-change: transform;
+      }
+      .bar-step:hover {
+        transform: scaleY(1.25);
+        filter: brightness(1.15);
+      }
+      .bar-step:active {
+        transform: scaleY(0.85);
+        transition-duration: 80ms;
+      }
+
+      input[type="range"].timeline-scrubber {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+      }
+      input[type="range"].timeline-scrubber::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--scrub-thumb);
+        cursor: pointer;
+        border: none;
+        margin-top: -3px;
+      }
+      input[type="range"].timeline-scrubber::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--scrub-thumb);
+        cursor: pointer;
+        border: none;
+      }
+      input[type="range"].timeline-scrubber::-webkit-slider-runnable-track {
+        height: 8px;
+        background: transparent;
+      }
+      input[type="range"].timeline-scrubber::-moz-range-track {
+        height: 8px;
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
