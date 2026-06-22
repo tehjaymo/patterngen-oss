@@ -4,6 +4,12 @@ A procedural pattern generator for motion graphics. Design title compositions in
 
 ![PatternGen](https://img.shields.io/badge/license-MIT-blue)
 
+[![Motion App — watch the walkthrough on YouTube](docs/motion-app-thumbnail.png)](https://www.youtube.com/watch?v=edUOvt6Y5ts)
+
+**Watch the walkthrough:** [Motion App — Figma → Web App → Blender workflow](https://www.youtube.com/watch?v=edUOvt6Y5ts)
+
+This video shows the full pipeline in action: designing a title composition in Figma, exporting it with the plugin, generating and animating patterns in the web app, and importing the layered PNG sequences into Blender for final compositing.
+
 ## Overview
 
 PatternGen is a creative toolchain for building animated title cards with procedural pattern fills:
@@ -17,8 +23,8 @@ The generator places SVG-based pattern shapes, colored squares, and pulsating do
 ## Quick start
 
 ```bash
-git clone <repo-url> patterngen
-cd patterngen
+git clone https://github.com/halfof8/patterngen-oss.git
+cd patterngen-oss
 npm install
 npm run dev
 ```
