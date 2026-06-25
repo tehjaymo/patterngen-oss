@@ -38,7 +38,7 @@ export const Sidebar: React.FC = () => {
     showGrid, setShowGrid,
     theme, setTheme,
     titles, patterns, squares, dots, letters,
-    selectedElement, selectElement, selectLayer,
+    selectedElement, selectElement, selectLayer, clearSelection,
     setSelectedMotionStyle, setSelectedClipSide, randomizeSelectedMotion,
   } = useStore();
 
@@ -80,8 +80,8 @@ export const Sidebar: React.FC = () => {
       id: dot.id,
       label: `DOT ${i + 1}`,
       detail: `${Math.round(dot.x)},${Math.round(dot.y)}`,
-      motionStyle: undefined,
-      clipSide: undefined,
+      motionStyle: dot.motionStyle,
+      clipSide: dot.clipSide,
     })),
     ...letters.map((letter, i) => ({
       kind: 'letter' as SelectableElementKind,
@@ -115,7 +115,7 @@ export const Sidebar: React.FC = () => {
                   <button
                     data-testid={`layer-group-${group.kind}`}
                     key={group.kind}
-                    onClick={() => selectLayer(group.kind)}
+                    onClick={() => { selected ? clearSelection() : selectLayer(group.kind); }}
                     style={{ ...styles.layerGroupBtn, ...(selected ? styles.layerGroupBtnSelected : {}) }}
                   >
                     <span>{group.label}</span>
@@ -135,7 +135,7 @@ export const Sidebar: React.FC = () => {
                 <button
                   data-testid={`layer-row-${layer.kind}-${layer.id}`}
                   key={`${layer.kind}:${layer.id}`}
-                  onClick={() => selectElement(layer.kind, layer.id)}
+                  onClick={() => { selected ? clearSelection() : selectElement(layer.kind, layer.id); }}
                   style={{ ...styles.layerRow, ...(selected ? styles.layerRowSelected : {}) }}
                 >
                   <span>{layer.label}</span>
@@ -367,7 +367,7 @@ function getSelectedMotion(
   selected: ReturnType<typeof useStore.getState>['selectedElement'],
   layers: LayerRow[],
 ): { motionStyle?: MotionStyle; clipSide?: ClipSide } | null {
-  if (!selected || selected.kind === 'dot') return null;
+  if (!selected) return null;
 
   const selectedRows = selected.scope === 'layer'
     ? layers.filter((layer) => layer.kind === selected.kind)

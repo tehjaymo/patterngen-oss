@@ -127,14 +127,24 @@ export async function renderFrame(
   if (!layer || layer === 'dots') {
     for (const dot of dots) {
       const opacity = state.dotOpacities.get(dot.id) ?? 0;
+      const progress = state.dotProgress.get(dot.id) ?? 1;
       if (opacity <= 0) continue;
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.fillStyle = dot.color;
-      ctx.beginPath();
-      ctx.arc(dot.x + 4, dot.y + 4, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      drawWithMotion(
+        ctx,
+        { x: dot.x, y: dot.y, w: 8, h: 8 },
+        progress,
+        dot.motionStyle,
+        dot.clipSide,
+        () => {
+          ctx.save();
+          ctx.globalAlpha *= opacity;
+          ctx.fillStyle = dot.color;
+          ctx.beginPath();
+          ctx.arc(dot.x + 4, dot.y + 4, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        },
+      );
     }
   }
 

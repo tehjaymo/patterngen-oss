@@ -89,6 +89,7 @@ export async function exportLayer(
         squareClips: new Map(),
         squareProgress: new Map(),
         letterProgress: new Map(),
+        dotProgress: new Map(dots.map((dot) => [dot.id, 1])),
         dotOpacities,
       };
       await renderFrame(ctx, state, titles, patterns, squares, letters, dots, patternDefs, EXPORT_SCALE, layer);

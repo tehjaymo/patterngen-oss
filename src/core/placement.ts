@@ -236,6 +236,9 @@ export function generatePlacement(
         id: nextId(),
         x: c * GRID_SIZE + 6, y: r * GRID_SIZE + 6,
         color: generateDotColor(enabledColors, rand),
+        clipSide: pickClipSide(),
+        motionStyle: DEFAULT_ELEMENT_MOTION,
+        animDelay: rand(),
         blinkPhase: rand(),
         blinkSpeed: 0.15 + rand() * 0.25,
       });

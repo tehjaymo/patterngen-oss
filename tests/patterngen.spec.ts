@@ -27,7 +27,13 @@ interface AppSnapshot {
     clipSide: ClipSide;
   }>;
   squares: Array<{ id: string; motionStyle: MotionStyle; clipSide: ClipSide }>;
-  dots: Array<{ id: string; blinkPhase: number; blinkSpeed: number }>;
+  dots: Array<{
+    id: string;
+    motionStyle: MotionStyle;
+    clipSide: ClipSide;
+    blinkPhase: number;
+    blinkSpeed: number;
+  }>;
   letters: Array<{ id: string; char: string; motionStyle: MotionStyle; clipSide: ClipSide }>;
   selectedElement: null | { scope: 'element' | 'layer'; kind: string; id?: string };
   theme: 'dark' | 'light';
@@ -74,6 +80,8 @@ async function appState(page: Page): Promise<AppSnapshot> {
       })),
       dots: state.dots.map((dot) => ({
         id: dot.id,
+        motionStyle: dot.motionStyle,
+        clipSide: dot.clipSide,
         blinkPhase: dot.blinkPhase,
         blinkSpeed: dot.blinkSpeed,
       })),
@@ -148,12 +156,24 @@ test('selects individual rows and whole layer groups', async ({ page }) => {
     kind: 'square',
     id: state.squares[0].id,
   });
+  await page.getByTestId(`layer-row-square-${state.squares[0].id}`).click();
+  await expect.poll(async () => (await appState(page)).selectedElement).toBeNull();
 
   await page.getByTestId('layer-group-dot').click();
   await expect.poll(async () => (await appState(page)).selectedElement).toEqual({
     scope: 'layer',
     kind: 'dot',
   });
+  await page.getByTestId('layer-group-dot').click();
+  await expect.poll(async () => (await appState(page)).selectedElement).toBeNull();
+
+  await page.getByTestId('layer-group-title').click();
+  await expect.poll(async () => (await appState(page)).selectedElement).toEqual({
+    scope: 'layer',
+    kind: 'title',
+  });
+  await page.getByTestId('layer-group-title').click();
+  await expect.poll(async () => (await appState(page)).selectedElement).toBeNull();
 });
 
 test('applies motion style and direction to every selected square', async ({ page }) => {
@@ -167,6 +187,34 @@ test('applies motion style and direction to every selected square', async ({ pag
   expect(state.squares.length).toBeGreaterThan(1);
   expect(state.squares.every((square) => square.motionStyle === 'dissolve')).toBe(true);
   expect(state.squares.every((square) => square.clipSide === 'top')).toBe(true);
+});
+
+test('applies motion style and direction to every selected dot', async ({ page }) => {
+  await loadBasicScene(page);
+
+  await page.getByTestId('layer-group-dot').click();
+  await page.getByTestId('motion-style-scale').click();
+  await page.getByTestId('motion-direction-bottom').click();
+
+  const state = await appState(page);
+  expect(state.dots.length).toBeGreaterThan(1);
+  expect(state.dots.every((dot) => dot.motionStyle === 'scale')).toBe(true);
+  expect(state.dots.every((dot) => dot.clipSide === 'bottom')).toBe(true);
+});
+
+test('applies motion style and direction to an individual dot', async ({ page }) => {
+  const state = await loadBasicScene(page);
+  const targetDot = state.dots[0];
+
+  await page.getByTestId(`layer-row-dot-${targetDot.id}`).click();
+  await page.getByTestId('motion-style-slide-left').click();
+  await page.getByTestId('motion-direction-right').click();
+
+  const after = await appState(page);
+  const changedDot = after.dots.find((dot) => dot.id === targetDot.id);
+  expect(changedDot?.motionStyle).toBe('slide-left');
+  expect(changedDot?.clipSide).toBe('right');
+  expect(after.dots.filter((dot) => dot.motionStyle === 'slide-left')).toHaveLength(1);
 });
 
 test('randomizes square reveals and dot pulse settings independently', async ({ page }) => {
@@ -192,6 +240,8 @@ test('randomizes square reveals and dot pulse settings independently', async ({ 
   const afterDots = (await appState(page)).dots;
 
   expect(afterDots).toHaveLength(beforeDots.length);
+  expect(new Set(afterDots.map((dot) => dot.motionStyle)).size).toBeGreaterThan(1);
+  expect(new Set(afterDots.map((dot) => dot.clipSide)).size).toBeGreaterThan(1);
   expect(afterDots.some((dot, index) => dot.blinkPhase !== beforeDots[index].blinkPhase)).toBe(true);
   expect(afterDots.some((dot, index) => dot.blinkSpeed !== beforeDots[index].blinkSpeed)).toBe(true);
 });
@@ -209,6 +259,15 @@ test('generates title letter glyphs instead of squares while keeping dots', asyn
   expect(state.dots.length).toBeGreaterThan(0);
   expect(new Set(state.letters.map((letter) => letter.char))).toEqual(new Set(['E', '2']));
   await expect(page.getByTestId('layer-group-letter')).toContainText(String(state.letters.length));
+
+  await page.getByTestId('layer-group-letter').click();
+  await expect.poll(async () => (await appState(page)).selectedElement).toEqual({
+    scope: 'layer',
+    kind: 'letter',
+  });
+  await page.getByTestId('motion-random-button').click();
+  await page.getByTestId('layer-group-letter').click();
+  await expect.poll(async () => (await appState(page)).selectedElement).toBeNull();
 });
 
 test('uses only text metadata when generating title letter glyphs', async ({ page }) => {

@@ -169,7 +169,7 @@ function pickRandom<T>(items: T[]): T {
 
 function randomDotMotion(dot: DotElement): DotElement {
   return {
-    ...dot,
+    ...randomElementMotion(dot),
     blinkPhase: Math.random(),
     blinkSpeed: 0.15 + Math.random() * 0.25,
   };
@@ -448,7 +448,12 @@ export const useStore = create<AppState>((set, get) => ({
             motionStyle: sq.motionStyle ?? DEFAULT_ELEMENT_MOTION,
             clipSide: sq.clipSide ?? 'left',
           })),
-          dots: saved.dots ?? [],
+          dots: (saved.dots ?? []).map((dot) => ({
+            ...dot,
+            motionStyle: dot.motionStyle ?? DEFAULT_ELEMENT_MOTION,
+            clipSide: dot.clipSide ?? 'left',
+            animDelay: dot.animDelay ?? 0,
+          })),
           letters: (saved.letters ?? []).map((letter) => ({
             ...letter,
             motionStyle: letter.motionStyle ?? DEFAULT_ELEMENT_MOTION,
@@ -516,6 +521,9 @@ export const useStore = create<AppState>((set, get) => ({
         if (selected.kind === 'letter') {
           return { letters: s.letters.map((letter) => ({ ...letter, motionStyle: style })) };
         }
+        if (selected.kind === 'dot') {
+          return { dots: s.dots.map((dot) => ({ ...dot, motionStyle: style })) };
+        }
         return {};
       }
       if (selected.kind === 'title') {
@@ -546,6 +554,13 @@ export const useStore = create<AppState>((set, get) => ({
           )),
         };
       }
+      if (selected.kind === 'dot') {
+        return {
+          dots: s.dots.map((dot) => (
+            dot.id === selected.id ? { ...dot, motionStyle: style } : dot
+          )),
+        };
+      }
       return {};
     });
   },
@@ -566,6 +581,9 @@ export const useStore = create<AppState>((set, get) => ({
         }
         if (selected.kind === 'letter') {
           return { letters: s.letters.map((letter) => ({ ...letter, clipSide: side })) };
+        }
+        if (selected.kind === 'dot') {
+          return { dots: s.dots.map((dot) => ({ ...dot, clipSide: side })) };
         }
         return {};
       }
@@ -594,6 +612,13 @@ export const useStore = create<AppState>((set, get) => ({
         return {
           letters: s.letters.map((letter) => (
             letter.id === selected.id ? { ...letter, clipSide: side } : letter
+          )),
+        };
+      }
+      if (selected.kind === 'dot') {
+        return {
+          dots: s.dots.map((dot) => (
+            dot.id === selected.id ? { ...dot, clipSide: side } : dot
           )),
         };
       }

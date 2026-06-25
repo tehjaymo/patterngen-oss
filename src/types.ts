@@ -134,6 +134,9 @@ export interface DotElement {
   x: number;
   y: number;
   color: string;
+  clipSide: ClipSide;
+  motionStyle: MotionStyle;
+  animDelay: number;
   blinkPhase: number;
   blinkSpeed: number;
 }
@@ -160,5 +163,6 @@ export interface AnimationState {
   squareClips: Map<string, { x: number; y: number; w: number; h: number }>;
   squareProgress: Map<string, number>;
   letterProgress: Map<string, number>;
+  dotProgress: Map<string, number>;
   dotOpacities: Map<string, number>;
 }

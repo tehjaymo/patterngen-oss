@@ -31,6 +31,7 @@ export function evaluate(
   const squareClips = new Map<string, { x: number; y: number; w: number; h: number }>();
   const squareProgress = new Map<string, number>();
   const letterProgress = new Map<string, number>();
+  const dotProgress = new Map<string, number>();
   const dotOpacities = new Map<string, number>();
 
   const dur = Math.max(1, durationMs);
@@ -61,7 +62,10 @@ export function evaluate(
       squareProgress.set(sq.id, 0);
     }
     for (const letter of letters) letterProgress.set(letter.id, 0);
-    for (const dot of dots) dotOpacities.set(dot.id, 0);
+    for (const dot of dots) {
+      dotProgress.set(dot.id, 0);
+      dotOpacities.set(dot.id, 0);
+    }
   } else {
     const cycleMs = afterTitle % cycleLen;
     const revealEnd = dur;
@@ -105,15 +109,21 @@ export function evaluate(
     const inHold = cycleMs >= revealEnd;
     for (const dot of dots) {
       if (!inHold) {
+        dotProgress.set(dot.id, 0);
         dotOpacities.set(dot.id, 0);
       } else {
         const holdMs = cycleMs - revealEnd;
+        const staggeredStart = dot.animDelay * staggerWindow * dur;
+        const elemDur = dur * (1 - staggerWindow);
+        const localMs = holdMs - staggeredStart;
+        const p = Math.max(0, Math.min(1, localMs / elemDur));
+        dotProgress.set(dot.id, applyEasing(p, easing));
         dotOpacities.set(dot.id, evaluateDotPulse(dot, holdMs));
       }
     }
   }
 
-  return { t: elapsedMs / dur, titleClips, titleProgress, patternProgress, squareClips, squareProgress, letterProgress, dotOpacities };
+  return { t: elapsedMs / dur, titleClips, titleProgress, patternProgress, squareClips, squareProgress, letterProgress, dotProgress, dotOpacities };
 }
 
 const DOT_LOOP_MS = 4000;
