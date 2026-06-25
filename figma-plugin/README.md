@@ -38,7 +38,8 @@ In PatternGen:
 
 - **Titles**: every visible top-level child of the frame is rendered to a
   **2× PNG** (retina) and embedded as a `data:` URL. Positions and sizes
-  are snapped to the 20 px grid.
+  are snapped to the 20 px grid. The plugin exports each title inside a
+  transparent bounds wrapper so intentional padding around text is preserved.
 - **Text metadata**: if a title layer is a text box, or contains nested text
   boxes, the exported title also includes a plain `text` string and a
   `textNodes` array with each text node's id, name, text, and frame-relative

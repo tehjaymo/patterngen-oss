@@ -64,6 +64,38 @@ function collectTextNodes(node, frameBox, out) {
   }
 }
 
+async function exportChildWithBounds(child, frameBox, bounds) {
+  const wrapper = figma.createFrame();
+  wrapper.name = `${child.name} export bounds`;
+  wrapper.x = frameBox.x + bounds.x;
+  wrapper.y = frameBox.y + bounds.y;
+  wrapper.resize(bounds.w, bounds.h);
+  wrapper.fills = [];
+  wrapper.strokes = [];
+  wrapper.clipsContent = true;
+
+  const clone = child.clone();
+  wrapper.appendChild(clone);
+
+  const childBox = child.absoluteBoundingBox;
+  if (childBox) {
+    clone.x = childBox.x - wrapper.x;
+    clone.y = childBox.y - wrapper.y;
+  } else {
+    clone.x = 0;
+    clone.y = 0;
+  }
+
+  try {
+    return await wrapper.exportAsync({
+      format: 'PNG',
+      constraint: { type: 'SCALE', value: 2 },
+    });
+  } finally {
+    wrapper.remove();
+  }
+}
+
 async function exportFrame(frame) {
   const frameBox = frame.absoluteBoundingBox;
   if (!frameBox) throw new Error(`Cannot determine bounds of "${frame.name}".`);
@@ -94,10 +126,7 @@ async function exportFrame(frame) {
 
     let bytes;
     try {
-      bytes = await child.exportAsync({
-        format: 'PNG',
-        constraint: { type: 'SCALE', value: 2 },
-      });
+      bytes = await exportChildWithBounds(child, frameBox, { x, y, w, h });
     } catch (e) {
       skipped.push(`${child.name} (export failed)`);
       continue;
