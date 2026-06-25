@@ -18,7 +18,13 @@ type ClipSide = 'top' | 'bottom' | 'left' | 'right';
 
 interface AppSnapshot {
   sceneName: string;
-  titles: Array<{ id: string; motionStyle: MotionStyle; clipSide: ClipSide }>;
+  titles: Array<{
+    id: string;
+    text?: string;
+    textNodes?: Array<{ text: string }>;
+    motionStyle: MotionStyle;
+    clipSide: ClipSide;
+  }>;
   squares: Array<{ id: string; motionStyle: MotionStyle; clipSide: ClipSide }>;
   dots: Array<{ id: string; blinkPhase: number; blinkSpeed: number }>;
   selectedElement: null | { scope: 'element' | 'layer'; kind: string; id?: string };
@@ -51,6 +57,8 @@ async function appState(page: Page): Promise<AppSnapshot> {
       sceneName: state.sceneName,
       titles: state.titles.map((title) => ({
         id: title.id,
+        text: title.text,
+        textNodes: title.textNodes,
         motionStyle: title.motionStyle,
         clipSide: title.clipSide,
       })),
@@ -99,6 +107,9 @@ test('loads a scene and generates selectable layer groups', async ({ page }) => 
   const state = await loadBasicScene(page);
 
   expect(state.sceneName).toBe('e2e_scene');
+  expect(state.titles[0].text).toBe('E2E');
+  expect(state.titles[0].textNodes?.[0].text).toBe('E2E');
+  await expect(page.getByTestId('metadata-box')).toContainText('E2E');
   await expect(page.getByTestId('layer-group-title')).toContainText('1');
   await expect(page.getByTestId('layer-group-square')).toContainText(String(state.squares.length));
   await expect(page.getByTestId('layer-group-dot')).toContainText(String(state.dots.length));
@@ -198,12 +209,19 @@ test('saves title motion settings in scene JSON', async ({ page }) => {
   for await (const chunk of contents) chunks.push(Buffer.from(chunk));
   const scene = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {
     sceneName: string;
-    titles: Array<{ motionStyle: MotionStyle; clipSide: ClipSide }>;
+    titles: Array<{
+      text?: string;
+      textNodes?: Array<{ text: string }>;
+      motionStyle: MotionStyle;
+      clipSide: ClipSide;
+    }>;
   };
 
   expect(download.suggestedFilename()).toBe('e2e_scene_patterngen.json');
   expect(scene.sceneName).toBe('e2e_scene');
   expect(scene.titles).toHaveLength(1);
+  expect(scene.titles[0].text).toBe('E2E');
+  expect(scene.titles[0].textNodes?.[0].text).toBe('E2E');
   expect(scene.titles[0].motionStyle).toBe('scale');
   expect(scene.titles[0].clipSide).toBe('bottom');
 });

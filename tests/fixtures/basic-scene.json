@@ -4,6 +4,19 @@
   "titles": [
     {
       "id": "el_1",
+      "name": "Title Text",
+      "text": "E2E",
+      "textNodes": [
+        {
+          "id": "text_1",
+          "name": "Headline",
+          "text": "E2E",
+          "x": 790,
+          "y": 492,
+          "w": 112,
+          "h": 72
+        }
+      ],
       "dataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMTYwIiB2aWV3Qm94PSIwIDAgNDAwIDE2MCI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSIxNjAiIGZpbGw9IndoaXRlIi8+PHRleHQgeD0iMzAiIHk9Ijk1IiBmb250LXNpemU9IjY0IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZpbGw9ImJsYWNrIj5FMkU8L3RleHQ+PC9zdmc+",
       "x": 760,
       "y": 460,

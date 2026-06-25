@@ -81,8 +81,21 @@ export interface PatternDef {
   shapes: SvgShapeInfo[];
 }
 
+export interface TitleTextNode {
+  id: string;
+  name: string;
+  text: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface TitleElement {
   id: string;
+  name?: string;
+  text?: string;
+  textNodes?: TitleTextNode[];
   img: HTMLImageElement;
   x: number;
   y: number;

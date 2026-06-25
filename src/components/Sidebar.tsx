@@ -83,6 +83,14 @@ export const Sidebar: React.FC = () => {
     })),
   ];
   const selectedMotion = getSelectedMotion(selectedElement, layers);
+  const metadataTitles = titles
+    .map((title, index) => ({
+      id: title.id,
+      label: title.name || `TITLE ${index + 1}`,
+      text: title.text?.trim() || title.textNodes?.map((node) => node.text).join('\n').trim() || '',
+      textNodes: title.textNodes ?? [],
+    }))
+    .filter((title) => title.text.length > 0 || title.textNodes.length > 0);
 
   return (
     <aside data-testid="sidebar" style={styles.sidebar}>
@@ -280,6 +288,30 @@ export const Sidebar: React.FC = () => {
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {metadataTitles.length > 0 && (
+        <div data-testid="metadata-box" style={{ ...styles.section, ...styles.metadataBox, width: CONTENT_W }}>
+          <div style={styles.metadataTitle}>METADATA</div>
+          {metadataTitles.map((title) => (
+            <div key={title.id} style={styles.metadataItem}>
+              <div style={styles.metadataLabel}>{title.label}</div>
+              <div data-testid={`metadata-title-${title.id}`} style={styles.metadataText}>
+                {title.text}
+              </div>
+              {title.textNodes.length > 1 && (
+                <div style={styles.metadataNodes}>
+                  {title.textNodes.map((node) => (
+                    <div key={node.id} style={styles.metadataNode}>
+                      <span style={styles.metadataNodeName}>{node.name}</span>
+                      <span>{node.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </aside>
@@ -539,5 +571,61 @@ const styles: Record<string, React.CSSProperties> = {
   motionBtnActive: {
     borderColor: 'var(--fg-strong)',
     color: 'var(--fg-strong)',
+  },
+  metadataBox: {
+    border: '1px solid var(--muted-3)',
+    borderRadius: 4,
+    padding: 10,
+    marginTop: 'auto',
+  },
+  metadataTitle: {
+    color: 'var(--fg-strong)',
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: '0.06em',
+    marginBottom: 10,
+  },
+  metadataItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 5,
+  },
+  metadataLabel: {
+    color: 'var(--muted)',
+    fontSize: 10,
+    fontWeight: 800,
+    letterSpacing: '0.04em',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  metadataText: {
+    color: 'var(--fg)',
+    fontSize: 12,
+    fontWeight: 600,
+    lineHeight: 1.35,
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'anywhere',
+  },
+  metadataNodes: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 3,
+    paddingTop: 4,
+    borderTop: '1px solid var(--muted-3)',
+  },
+  metadataNode: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    color: 'var(--muted)',
+    fontSize: 10,
+    lineHeight: 1.25,
+    overflowWrap: 'anywhere',
+  },
+  metadataNodeName: {
+    color: 'var(--muted-2)',
+    fontWeight: 800,
+    letterSpacing: '0.03em',
   },
 };

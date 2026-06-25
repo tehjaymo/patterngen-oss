@@ -11,6 +11,7 @@ const GRID = 20;
 figma.showUI(__html__, { width: 320, height: 360 });
 
 const snap = (v) => Math.round(v / GRID) * GRID;
+const round = (v) => Math.round(v);
 
 function rgbToHex(r, g, b) {
   const h = (v) => Math.round(v * 255).toString(16).padStart(2, '0').toUpperCase();
@@ -39,6 +40,28 @@ function collectUsedColors(node, out) {
 
 function randomSeed() {
   return Math.floor(Math.random() * 0x7fffffff);
+}
+
+function collectTextNodes(node, frameBox, out) {
+  if (node.visible === false) return;
+
+  if (node.type === 'TEXT') {
+    const box = node.absoluteBoundingBox;
+    out.push({
+      id: node.id,
+      name: node.name,
+      text: node.characters,
+      x: box ? round(box.x - frameBox.x) : 0,
+      y: box ? round(box.y - frameBox.y) : 0,
+      w: box ? round(box.width) : 0,
+      h: box ? round(box.height) : 0,
+    });
+    return;
+  }
+
+  if ('children' in node) {
+    for (const child of node.children) collectTextNodes(child, frameBox, out);
+  }
 }
 
 async function exportFrame(frame) {
@@ -80,12 +103,21 @@ async function exportFrame(frame) {
       continue;
     }
 
-    titles.push({
+    const textNodes = [];
+    collectTextNodes(child, frameBox, textNodes);
+    const text = textNodes.map((textNode) => textNode.text).join('\n');
+
+    const title = {
       id: child.id,
       name: child.name,
       bytes: Array.from(bytes),
       x, y, w, h,
-    });
+    };
+    if (textNodes.length > 0) {
+      title.text = text;
+      title.textNodes = textNodes;
+    }
+    titles.push(title);
   }
 
   // Filter out pure black/white since those are fixed; keep all unique colors found

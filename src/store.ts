@@ -11,6 +11,7 @@ import type {
   SelectedElement,
   SelectableElementKind,
   SelectableLayerKind,
+  TitleTextNode,
 } from './types';
 import { FIXED_COLORS, DEFAULT_CUSTOM_COLORS, DEFAULT_TITLE_MOTION, DEFAULT_ELEMENT_MOTION } from './types';
 import type { EasingName } from './engine/easing';
@@ -21,6 +22,9 @@ import { mulberry32, randomSeed } from './core/rng';
 
 interface SavedTitle {
   id: string;
+  name?: string;
+  text?: string;
+  textNodes?: TitleTextNode[];
   dataUrl: string;
   x: number;
   y: number;
@@ -346,6 +350,9 @@ export const useStore = create<AppState>((set, get) => ({
         seed: s.seed,
         titles: s.titles.map((t) => ({
           id: t.id,
+          name: t.name,
+          text: t.text,
+          textNodes: t.textNodes,
           dataUrl: imgToDataUrl(t.img, t.w, t.h),
           x: t.x,
           y: t.y,
@@ -394,6 +401,9 @@ export const useStore = create<AppState>((set, get) => ({
           const img = await dataUrlToImg(st.dataUrl);
           titles.push({
             id: st.id,
+            name: st.name,
+            text: st.text,
+            textNodes: st.textNodes,
             img,
             x: st.x,
             y: st.y,

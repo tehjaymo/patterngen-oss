@@ -46,8 +46,8 @@
   Select one or more <b>1920×1080</b> frames and click export.
   Each frame produces a <code>*_patterngen.json</code> file with its
   top-level layers exported as 2× PNGs, positioned on a 20 px grid.
-  Unique colors found on the artboard are included as the scene's
-  color set.
+  Text layers are retained as metadata, and unique colors found on the
+  artboard are included as the scene's color set.
 </p>
 
 <button id="exportBtn">Export Selected Frames</button>
@@ -121,7 +121,12 @@ window.addEventListener('message', async (event) => {
         scene.titles.map(async (t) => {
           const blob = new Blob([new Uint8Array(t.bytes)], { type: 'image/png' });
           const dataUrl = await blobToDataUrl(blob);
-          return { id: t.id, dataUrl, x: t.x, y: t.y, w: t.w, h: t.h };
+          const title = { id: t.id, name: t.name, dataUrl, x: t.x, y: t.y, w: t.w, h: t.h };
+          if (t.textNodes && t.textNodes.length) {
+            title.text = t.text || '';
+            title.textNodes = t.textNodes;
+          }
+          return title;
         }),
       );
 

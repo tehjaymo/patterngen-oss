@@ -39,6 +39,10 @@ In PatternGen:
 - **Titles**: every visible top-level child of the frame is rendered to a
   **2× PNG** (retina) and embedded as a `data:` URL. Positions and sizes
   are snapped to the 20 px grid.
+- **Text metadata**: if a title layer is a text box, or contains nested text
+  boxes, the exported title also includes a plain `text` string and a
+  `textNodes` array with each text node's id, name, text, and frame-relative
+  bounds. PatternGen still uses the rendered PNG for visual fidelity.
 - **Color set**: the plugin scans the frame's fills and strokes and
   includes all unique colors found (excluding pure black/white, which
   are always available in PatternGen).
