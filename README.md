@@ -10,12 +10,20 @@ A procedural pattern generator for motion graphics. Design title compositions in
 
 This video shows the full pipeline in action: designing a title composition in Figma, exporting it with the plugin, generating and animating patterns in the web app, and importing the layered PNG sequences into Blender for final compositing.
 
+## Screenshots
+
+![PatternGen editor with a loaded scene and square layer selected](docs/patterngen-editor.png)
+
+The web app centers a 1920×1080 canvas beside layer and motion controls. Load a scene, generate a deterministic layout, select individual elements or whole layers, then preview and export transparent PNG sequences.
+
+![PatternGen layer and motion controls](docs/patterngen-motion-controls.png)
+
 ## Overview
 
 PatternGen is a creative toolchain for building animated title cards with procedural pattern fills:
 
 1. **Figma plugin** — export artboards as scene JSON files with title positions and colors
-2. **Web app** — load scenes, generate patterns, preview animations, export PNG sequences
+2. **Web app** — load scenes, generate patterns, tune per-layer motion, preview animations, export PNG sequences
 3. **Blender add-on** — import the exported sequences as layered 3D planes for compositing
 
 The generator places SVG-based pattern shapes, colored squares, and pulsating dots around your title elements using a seeded random placement algorithm. Every generation is deterministic — same seed, same layout.
@@ -37,6 +45,30 @@ Open `http://localhost:5173` in your browser.
 
 Drag and drop PNG/JPG images onto the canvas. They snap to a 20 px grid.
 Click and drag to reposition. Drag off the canvas to remove.
+
+### Selecting layers and elements
+
+The sidebar lists generated layers and elements after a title image or scene has been loaded:
+
+- Click **TITLES**, **SQUARES**, **PATTERNS**, or **DOTS** to select every item in that layer.
+- Click an individual row such as **TITLE 1** or **SQUARE 3** to edit just that element.
+- Selected items are outlined on the canvas.
+
+### Motion controls
+
+The **MOTION** panel changes how selected titles, pattern tiles, and squares reveal:
+
+| Motion      | Effect                                           |
+| ----------- | ------------------------------------------------ |
+| `CENTER`    | Reveals from the element center                  |
+| `WIPE`      | Reveals from the selected direction              |
+| `DISSOLVE`  | Fades the element in                             |
+| `SCALE`     | Scales and fades the element into place          |
+| `UP/DOWN`   | Slides vertically into place                     |
+| `LEFT/RIGHT`| Slides horizontally into place                   |
+| `RANDOM`    | Gives selected items individual randomized motion |
+
+Direction buttons set the wipe side for selected titles, pattern tiles, and squares. When **DOTS** are selected, **RANDOM** randomizes each dot's pulse timing instead of applying a reveal style.
 
 ### Adding pattern shapes
 
@@ -82,13 +114,14 @@ The app starts with two fixed colors — **black** and **white**. Click **+ ADD 
 
 ### Controls
 
-| Control    | Description                                         |
-| ---------- | --------------------------------------------------- |
-| GENERATE   | Re-roll the pattern layout with a new random seed   |
-| PLAY/PAUSE | Animate the reveal sequence                         |
-| SAVE       | Download the current scene as a `.json` file        |
-| LOAD       | Load a scene from a `.json` file                    |
-| EXPORT     | Export three PNG sequences (titles, patterns, dots)  |
+| Control    | Description                                           |
+| ---------- | ----------------------------------------------------- |
+| GENERATE   | Re-roll the pattern layout with a new random seed     |
+| PLAY/PAUSE | Animate the reveal sequence                           |
+| SAVE       | Download the current scene as a `.json` file          |
+| LOAD       | Load a scene from a `.json` file                      |
+| EXPORT     | Export three PNG sequences (titles, patterns, dots)   |
+| RANDOM     | Randomize motion for the selected element or layer    |
 
 ### Sidebar parameters
 
@@ -117,6 +150,18 @@ scene_pattern_gen.zip
 ```
 
 Each layer has a transparent background so they can be composited independently.
+
+Changing layer motion in the web app changes the rendered PNG frames only. The exported folder structure remains compatible with the Blender add-on.
+
+### Tests
+
+Run the Playwright end-to-end tests with:
+
+```bash
+npm run test:e2e
+```
+
+The suite covers the editor shell, scene loading, layer selection, group motion controls, random square/dot behavior, sidebar scrolling, and saved scene motion settings.
 
 ## Figma plugin
 
