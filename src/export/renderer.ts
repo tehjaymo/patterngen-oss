@@ -4,6 +4,7 @@ import type {
   PatternElement,
   SquareElement,
   DotElement,
+  LetterElement,
   ExportLayer,
   PatternDef,
   MotionStyle,
@@ -19,6 +20,7 @@ export async function renderFrame(
   titles: TitleElement[],
   patterns: PatternElement[],
   squares: SquareElement[],
+  letters: LetterElement[],
   dots: DotElement[],
   patternDefs: Map<string, PatternDef>,
   scale: number,
@@ -107,6 +109,19 @@ export async function renderFrame(
         },
       );
     }
+
+    for (const letter of letters) {
+      const progress = state.letterProgress.get(letter.id) ?? 0;
+      const img = await svgToImage(letterSvgText(letter.char, letter.color, letter.size));
+      drawWithMotion(
+        ctx,
+        { x: letter.x, y: letter.y, w: letter.size, h: letter.size },
+        progress,
+        letter.motionStyle,
+        letter.clipSide,
+        () => ctx.drawImage(img, letter.x, letter.y, letter.size, letter.size),
+      );
+    }
   }
 
   if (!layer || layer === 'dots') {
@@ -124,6 +139,22 @@ export async function renderFrame(
   }
 
   ctx.restore();
+}
+
+function escapeSvgText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function letterSvgText(char: string, color: string, size: number): string {
+  const fontSize = Math.max(10, Math.round(size * 0.9));
+  const escaped = escapeSvgText(char);
+  return `
+<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+  <text x="${size / 2}" y="${size / 2}" fill="${color}" font-size="${fontSize}" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="700" text-anchor="middle" dominant-baseline="central">${escaped}</text>
+</svg>`;
 }
 
 export function drawGrid(ctx: CanvasRenderingContext2D, scale: number) {

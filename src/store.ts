@@ -4,6 +4,7 @@ import type {
   PatternElement,
   SquareElement,
   DotElement,
+  LetterElement,
   PatternDef,
   ColorPair,
   MotionStyle,
@@ -12,6 +13,7 @@ import type {
   SelectableElementKind,
   SelectableLayerKind,
   TitleTextNode,
+  GenerationMode,
 } from './types';
 import { FIXED_COLORS, DEFAULT_CUSTOM_COLORS, DEFAULT_TITLE_MOTION, DEFAULT_ELEMENT_MOTION } from './types';
 import type { EasingName } from './engine/easing';
@@ -41,6 +43,8 @@ interface SavedScene {
   patterns?: PatternElement[];
   squares?: SquareElement[];
   dots?: DotElement[];
+  letters?: LetterElement[];
+  generationMode?: GenerationMode;
   durationMs: number;
   easing: EasingName;
   density: number;
@@ -79,6 +83,7 @@ interface AppState {
   patterns: PatternElement[];
   squares: SquareElement[];
   dots: DotElement[];
+  letters: LetterElement[];
 
   sceneName: string;
   seed: number;
@@ -89,6 +94,7 @@ interface AppState {
   stagger: number;
   showGrid: boolean;
   theme: 'dark' | 'light';
+  generationMode: GenerationMode;
 
   enabledColors: string[];
   customColors: string[];
@@ -122,6 +128,7 @@ interface AppState {
   setStagger: (s: number) => void;
   setShowGrid: (v: boolean) => void;
   setTheme: (t: 'dark' | 'light') => void;
+  setGenerationMode: (mode: GenerationMode) => void;
   addTitle: (img: HTMLImageElement, x: number, y: number, w: number, h: number) => void;
   moveTitle: (id: string, x: number, y: number) => void;
   removeTitle: (id: string) => void;
@@ -186,6 +193,7 @@ export const useStore = create<AppState>((set, get) => ({
   patterns: [],
   squares: [],
   dots: [],
+  letters: [],
 
   sceneName: 'scene',
   seed: randomSeed(),
@@ -196,6 +204,7 @@ export const useStore = create<AppState>((set, get) => ({
   stagger: 3,
   showGrid: true,
   theme: 'dark',
+  generationMode: 'marks',
 
   enabledColors: [...FIXED_COLORS],
   customColors: [...DEFAULT_CUSTOM_COLORS],
@@ -292,6 +301,11 @@ export const useStore = create<AppState>((set, get) => ({
       document.documentElement.dataset.theme = t;
     }
   },
+  setGenerationMode(mode) {
+    set({ generationMode: mode });
+    const { titles, seed } = get();
+    if (titles.length > 0) get().generate(seed);
+  },
 
   addTitle(img, x, y, w, h) {
     set((s) => ({
@@ -323,15 +337,15 @@ export const useStore = create<AppState>((set, get) => ({
     const useSeed = seed !== undefined ? seed : randomSeed();
     const rand = mulberry32(useSeed);
     const enabledDefs = s.patternDefs.filter((d) => s.enabledPatterns.has(d.id));
-    const { patterns, squares, dots } = generatePlacement(
-      s.titles, enabledDefs, s.enabledColors, s.density, s.proximity, rand,
+    const { patterns, squares, dots, letters } = generatePlacement(
+      s.titles, enabledDefs, s.enabledColors, s.density, s.proximity, rand, s.generationMode,
     );
     const palette = generatePalette(s.enabledColors);
     const logoColors: ColorPair[] = [];
     for (let i = 0; i < 3; i++) {
       logoColors.push(palette.length > 0 ? palette[Math.floor(rand() * palette.length)] : { bg: '#404040', fg: '#888888' });
     }
-    set({ seed: useSeed, patterns, squares, dots, logoColors, elapsedMs: 3 * s.durationMs, playing: false, selectedElement: null });
+    set({ seed: useSeed, patterns, squares, dots, letters, logoColors, elapsedMs: 3 * s.durationMs, playing: false, selectedElement: null });
   },
 
   setPlaying(p) { set({ playing: p }); },
@@ -367,6 +381,7 @@ export const useStore = create<AppState>((set, get) => ({
         proximity: s.proximity,
         stagger: s.stagger,
         theme: s.theme,
+        generationMode: s.generationMode,
         enabledColors: s.enabledColors,
         customColors: s.customColors,
         enabledPatterns: Array.from(s.enabledPatterns),
@@ -434,12 +449,18 @@ export const useStore = create<AppState>((set, get) => ({
             clipSide: sq.clipSide ?? 'left',
           })),
           dots: saved.dots ?? [],
+          letters: (saved.letters ?? []).map((letter) => ({
+            ...letter,
+            motionStyle: letter.motionStyle ?? DEFAULT_ELEMENT_MOTION,
+            clipSide: letter.clipSide ?? 'left',
+          })),
           durationMs: saved.durationMs ?? 6000,
           easing: saved.easing ?? 'easeOutCubic',
           density: saved.density ?? 10,
           proximity: saved.proximity ?? 2,
           stagger: saved.stagger ?? 3,
           theme: saved.theme ?? 'dark',
+          generationMode: saved.generationMode ?? 'marks',
           enabledColors: saved.enabledColors ?? [...FIXED_COLORS],
           customColors: saved.customColors ?? [...DEFAULT_CUSTOM_COLORS],
           enabledPatterns: new Set(
@@ -454,7 +475,8 @@ export const useStore = create<AppState>((set, get) => ({
         const noPlacement =
           (saved.patterns?.length ?? 0) === 0 &&
           (saved.squares?.length ?? 0) === 0 &&
-          (saved.dots?.length ?? 0) === 0;
+          (saved.dots?.length ?? 0) === 0 &&
+          (saved.letters?.length ?? 0) === 0;
         if (noPlacement && titles.length > 0) {
           get().generate(seed);
         }
@@ -491,6 +513,9 @@ export const useStore = create<AppState>((set, get) => ({
         if (selected.kind === 'square') {
           return { squares: s.squares.map((sq) => ({ ...sq, motionStyle: style })) };
         }
+        if (selected.kind === 'letter') {
+          return { letters: s.letters.map((letter) => ({ ...letter, motionStyle: style })) };
+        }
         return {};
       }
       if (selected.kind === 'title') {
@@ -514,6 +539,13 @@ export const useStore = create<AppState>((set, get) => ({
           )),
         };
       }
+      if (selected.kind === 'letter') {
+        return {
+          letters: s.letters.map((letter) => (
+            letter.id === selected.id ? { ...letter, motionStyle: style } : letter
+          )),
+        };
+      }
       return {};
     });
   },
@@ -531,6 +563,9 @@ export const useStore = create<AppState>((set, get) => ({
         }
         if (selected.kind === 'square') {
           return { squares: s.squares.map((sq) => ({ ...sq, clipSide: side })) };
+        }
+        if (selected.kind === 'letter') {
+          return { letters: s.letters.map((letter) => ({ ...letter, clipSide: side })) };
         }
         return {};
       }
@@ -555,6 +590,13 @@ export const useStore = create<AppState>((set, get) => ({
           )),
         };
       }
+      if (selected.kind === 'letter') {
+        return {
+          letters: s.letters.map((letter) => (
+            letter.id === selected.id ? { ...letter, clipSide: side } : letter
+          )),
+        };
+      }
       return {};
     });
   },
@@ -573,6 +615,9 @@ export const useStore = create<AppState>((set, get) => ({
         }
         if (selected.kind === 'square') {
           return { squares: s.squares.map(randomElementMotion) };
+        }
+        if (selected.kind === 'letter') {
+          return { letters: s.letters.map(randomElementMotion) };
         }
         return { dots: s.dots.map(randomDotMotion) };
       }
@@ -595,6 +640,13 @@ export const useStore = create<AppState>((set, get) => ({
         return {
           squares: s.squares.map((sq) => (
             sq.id === selected.id ? randomElementMotion(sq) : sq
+          )),
+        };
+      }
+      if (selected.kind === 'letter') {
+        return {
+          letters: s.letters.map((letter) => (
+            letter.id === selected.id ? randomElementMotion(letter) : letter
           )),
         };
       }

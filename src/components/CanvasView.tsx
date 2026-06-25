@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useStore } from '../store';
-import { CANVAS_W, CANVAS_H, GRID_SIZE, type SelectedElement, type SelectedSingleElement, type TitleElement, type PatternElement, type SquareElement, type DotElement } from '../types';
+import { CANVAS_W, CANVAS_H, GRID_SIZE, type SelectedElement, type SelectedSingleElement, type TitleElement, type PatternElement, type SquareElement, type DotElement, type LetterElement } from '../types';
 import { snapToGrid } from '../core/grid';
 import { evaluate } from '../engine/timeline';
 import { renderFrame, drawGrid } from '../export/renderer';
@@ -14,12 +14,12 @@ export const CanvasView: React.FC = () => {
   const [dragOver, setDragOver] = useState(false);
 
   const {
-    titles, patterns, squares, dots,
+    titles, patterns, squares, dots, letters,
     elapsedMs, durationMs, easing, stagger, patternDefsMap, playing,
     addTitle, moveTitle, removeTitle,
     showGrid: gridOn, bgImage, clearBgImage,
     setBgImage, setElapsedMs, setPlaying,
-    selectedElement, selectElement, clearSelection,
+    selectedElement, selectElement, clearSelection, generationMode,
   } = useStore();
 
   useEffect(() => {
@@ -44,15 +44,15 @@ export const CanvasView: React.FC = () => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
     let cancelled = false;
-    const state = evaluate(elapsedMs, durationMs, titles, patterns, squares, dots, easing, stagger);
-    renderFrame(ctx, state, titles, patterns, squares, dots, patternDefsMap, 1, undefined, CANVAS_BG, bgImage).then(() => {
+    const state = evaluate(elapsedMs, durationMs, titles, patterns, squares, letters, dots, easing, stagger);
+    renderFrame(ctx, state, titles, patterns, squares, letters, dots, patternDefsMap, 1, undefined, CANVAS_BG, bgImage).then(() => {
       if (!cancelled) {
         if (!playing && gridOn) drawGrid(ctx, 1);
-        drawSelection(ctx, selectedElement, titles, patterns, squares, dots);
+        drawSelection(ctx, selectedElement, titles, patterns, squares, letters, dots);
       }
     });
     return () => { cancelled = true; };
-  }, [elapsedMs, durationMs, titles, patterns, squares, dots, easing, stagger, patternDefsMap, playing, gridOn, bgImage, selectedElement]);
+  }, [elapsedMs, durationMs, titles, patterns, squares, letters, dots, easing, stagger, patternDefsMap, playing, gridOn, bgImage, selectedElement]);
 
   const toCanvasCoords = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current!;
@@ -123,6 +123,12 @@ export const CanvasView: React.FC = () => {
         return { scope: 'element', kind: 'square', id: sq.id };
       }
     }
+    for (let i = letters.length - 1; i >= 0; i--) {
+      const letter = letters[i];
+      if (mx >= letter.x && mx <= letter.x + letter.size && my >= letter.y && my <= letter.y + letter.size) {
+        return { scope: 'element', kind: 'letter', id: letter.id };
+      }
+    }
     const patternSize = GRID_SIZE * 2;
     for (let i = patterns.length - 1; i >= 0; i--) {
       const pat = patterns[i];
@@ -137,7 +143,7 @@ export const CanvasView: React.FC = () => {
       }
     }
     return null;
-  }, [titles, squares, patterns, dots]);
+  }, [titles, squares, letters, patterns, dots]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -264,7 +270,7 @@ export const CanvasView: React.FC = () => {
         </div>
         <div style={styles.labelsRow}>
           <span style={{ ...styles.layerLabel, position: 'absolute', left: `${titleEnd * 50}%`, transform: 'translateX(-50%)' }}>TITLES</span>
-          <span style={{ ...styles.layerLabel, position: 'absolute', left: `${(titleEnd + patternEnd) / 2 * 100}%`, transform: 'translateX(-50%)' }}>PATTERNS</span>
+          <span style={{ ...styles.layerLabel, position: 'absolute', left: `${(titleEnd + patternEnd) / 2 * 100}%`, transform: 'translateX(-50%)' }}>{generationMode === 'letters' ? 'LETTERS' : 'PATTERNS'}</span>
           <span style={{ ...styles.layerLabel, position: 'absolute', left: `${(patternEnd + 1) / 2 * 100}%`, transform: 'translateX(-50%)' }}>DOTS</span>
         </div>
       </div>
@@ -278,11 +284,12 @@ function drawSelection(
   titles: TitleElement[],
   patterns: PatternElement[],
   squares: SquareElement[],
+  letters: LetterElement[],
   dots: DotElement[],
 ) {
   if (!selected) return;
 
-  const bounds = getSelectionBounds(selected, titles, patterns, squares, dots);
+  const bounds = getSelectionBounds(selected, titles, patterns, squares, letters, dots);
   if (bounds.length === 0) return;
 
   ctx.save();
@@ -300,6 +307,7 @@ function getSelectionBounds(
   titles: TitleElement[],
   patterns: PatternElement[],
   squares: SquareElement[],
+  letters: LetterElement[],
   dots: DotElement[],
 ): Array<{ x: number; y: number; w: number; h: number }> {
   if (selected.scope === 'layer') {
@@ -310,6 +318,8 @@ function getSelectionBounds(
         return patterns.map((p) => ({ x: p.x, y: p.y, w: GRID_SIZE * 2, h: GRID_SIZE * 2 }));
       case 'square':
         return squares.map((sq) => ({ x: sq.x, y: sq.y, w: sq.size, h: sq.size }));
+      case 'letter':
+        return letters.map((letter) => ({ x: letter.x, y: letter.y, w: letter.size, h: letter.size }));
       case 'dot':
         return dots.map((dot) => ({ x: dot.x, y: dot.y, w: 8, h: 8 }));
     }
@@ -326,6 +336,10 @@ function getSelectionBounds(
   if (selected.kind === 'square') {
     const sq = squares.find((square) => square.id === selected.id);
     return sq ? [{ x: sq.x, y: sq.y, w: sq.size, h: sq.size }] : [];
+  }
+  if (selected.kind === 'letter') {
+    const letter = letters.find((item) => item.id === selected.id);
+    return letter ? [{ x: letter.x, y: letter.y, w: letter.size, h: letter.size }] : [];
   }
   const dot = dots.find((d) => d.id === selected.id);
   return dot ? [{ x: dot.x, y: dot.y, w: 8, h: 8 }] : [];

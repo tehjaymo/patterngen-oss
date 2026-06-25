@@ -1,0 +1,44 @@
+{
+  "sceneName": "text_with_rectangle",
+  "seed": 915104335,
+  "titles": [
+    {
+      "id": "rect_1",
+      "name": "Rectangle 1",
+      "dataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4NjAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgODYwIDEyMCI+PHJlY3Qgd2lkdGg9Ijg2MCIgaGVpZ2h0PSIxMjAiIGZpbGw9IndoaXRlIi8+PC9zdmc+",
+      "x": 540,
+      "y": 480,
+      "w": 860,
+      "h": 120
+    },
+    {
+      "id": "text_1",
+      "name": "PERMANENTLY MOVED",
+      "text": "PERMANENTLY MOVED",
+      "textNodes": [
+        {
+          "id": "text_1",
+          "name": "PERMANENTLY MOVED",
+          "text": "PERMANENTLY MOVED",
+          "x": 540,
+          "y": 520,
+          "w": 850,
+          "h": 40
+        }
+      ],
+      "dataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4NjAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA4NjAgNDAiPjx0ZXh0IHg9IjAiIHk9IjMwIiBmb250LXNpemU9IjMyIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZpbGw9IndoaXRlIj5QRVJNQU5FTlRMWSBNT1ZFRDwvdGV4dD48L3N2Zz4=",
+      "x": 540,
+      "y": 520,
+      "w": 860,
+      "h": 40
+    }
+  ],
+  "durationMs": 6000,
+  "easing": "easeOutCubic",
+  "density": 10,
+  "proximity": 2,
+  "stagger": 3,
+  "theme": "dark",
+  "enabledColors": ["#000000", "#FFFFFF", "#D9D9D9"],
+  "customColors": ["#D9D9D9"]
+}

@@ -9,6 +9,7 @@ import {
   type PatternElement,
   type SquareElement,
   type DotElement,
+  type LetterElement,
   type ExportLayer,
   type PatternDef,
 } from '../types';
@@ -25,6 +26,7 @@ interface ExportOptions {
   patterns: PatternElement[];
   squares: SquareElement[];
   dots: DotElement[];
+  letters: LetterElement[];
   patternDefs: Map<string, PatternDef>;
   onProgress: (done: number, total: number) => void;
 }
@@ -58,7 +60,7 @@ export async function exportLayer(
   layer: ExportLayer,
   options: ExportOptions,
 ): Promise<JSZip> {
-  const { sceneName, durationMs, easing, stagger, titles, patterns, squares, dots, patternDefs, onProgress } = options;
+  const { sceneName, durationMs, easing, stagger, titles, patterns, squares, dots, letters, patternDefs, onProgress } = options;
   const prefix = sceneName ? `${sceneName}_` : '';
 
   const layerDur = layerDurationMs(layer, durationMs);
@@ -86,13 +88,14 @@ export async function exportLayer(
         patternProgress: new Map(),
         squareClips: new Map(),
         squareProgress: new Map(),
+        letterProgress: new Map(),
         dotOpacities,
       };
-      await renderFrame(ctx, state, titles, patterns, squares, dots, patternDefs, EXPORT_SCALE, layer);
+      await renderFrame(ctx, state, titles, patterns, squares, letters, dots, patternDefs, EXPORT_SCALE, layer);
     } else {
       const elapsedMs = layerFrameToElapsed(layer, ratio, durationMs);
-      const state = evaluate(elapsedMs, durationMs, titles, patterns, squares, dots, easing, stagger);
-      await renderFrame(ctx, state, titles, patterns, squares, dots, patternDefs, EXPORT_SCALE, layer);
+      const state = evaluate(elapsedMs, durationMs, titles, patterns, squares, letters, dots, easing, stagger);
+      await renderFrame(ctx, state, titles, patterns, squares, letters, dots, patternDefs, EXPORT_SCALE, layer);
     }
 
     const blob = await canvasToBlob(canvas);

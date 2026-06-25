@@ -34,9 +34,10 @@ export const Sidebar: React.FC = () => {
     density, setDensity,
     proximity, setProximity,
     stagger, setStagger,
+    generationMode, setGenerationMode,
     showGrid, setShowGrid,
     theme, setTheme,
-    titles, patterns, squares, dots,
+    titles, patterns, squares, dots, letters,
     selectedElement, selectElement, selectLayer,
     setSelectedMotionStyle, setSelectedClipSide, randomizeSelectedMotion,
   } = useStore();
@@ -46,6 +47,7 @@ export const Sidebar: React.FC = () => {
     { kind: 'title' as SelectableLayerKind, label: 'TITLES', detail: `${titles.length}` },
     { kind: 'pattern' as SelectableLayerKind, label: 'PATTERNS', detail: `${patterns.length}` },
     { kind: 'square' as SelectableLayerKind, label: 'SQUARES', detail: `${squares.length}` },
+    { kind: 'letter' as SelectableLayerKind, label: 'LETTERS', detail: `${letters.length}` },
     { kind: 'dot' as SelectableLayerKind, label: 'DOTS', detail: `${dots.length}` },
   ].filter((group) => Number(group.detail) > 0);
   const layers = [
@@ -80,6 +82,14 @@ export const Sidebar: React.FC = () => {
       detail: `${Math.round(dot.x)},${Math.round(dot.y)}`,
       motionStyle: undefined,
       clipSide: undefined,
+    })),
+    ...letters.map((letter, i) => ({
+      kind: 'letter' as SelectableElementKind,
+      id: letter.id,
+      label: `LETTER ${i + 1}`,
+      detail: letter.char,
+      motionStyle: letter.motionStyle,
+      clipSide: letter.clipSide,
     })),
   ];
   const selectedMotion = getSelectedMotion(selectedElement, layers);
@@ -228,6 +238,32 @@ export const Sidebar: React.FC = () => {
               + ADD COLOR
             </button>
           )}
+        </div>
+      </div>
+
+      <div style={styles.section}>
+        <div style={styles.sectionTitle}>GENERATOR</div>
+        <div style={{ ...styles.modeGrid, width: CONTENT_W }}>
+          <button
+            data-testid="generation-mode-marks"
+            onClick={() => setGenerationMode('marks')}
+            style={{
+              ...styles.motionBtn,
+              ...(generationMode === 'marks' ? styles.motionBtnActive : {}),
+            }}
+          >
+            MARKS
+          </button>
+          <button
+            data-testid="generation-mode-letters"
+            onClick={() => setGenerationMode('letters')}
+            style={{
+              ...styles.motionBtn,
+              ...(generationMode === 'letters' ? styles.motionBtnActive : {}),
+            }}
+          >
+            LETTERS
+          </button>
         </div>
       </div>
 
@@ -524,6 +560,11 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: 'repeat(2, 1fr)',
     gap: 6,
     marginBottom: 8,
+  },
+  modeGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: 6,
   },
   directionGrid: {
     display: 'grid',

@@ -26,8 +26,10 @@ export type MotionStyle =
 export const DEFAULT_TITLE_MOTION: MotionStyle = 'center-wipe';
 export const DEFAULT_ELEMENT_MOTION: MotionStyle = 'wipe';
 
-export type SelectableElementKind = 'title' | 'pattern' | 'square' | 'dot';
+export type SelectableElementKind = 'title' | 'pattern' | 'square' | 'dot' | 'letter';
 export type SelectableLayerKind = SelectableElementKind;
+
+export type GenerationMode = 'marks' | 'letters';
 
 export interface SelectedSingleElement {
   scope: 'element';
@@ -136,6 +138,18 @@ export interface DotElement {
   blinkSpeed: number;
 }
 
+export interface LetterElement {
+  id: string;
+  char: string;
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  clipSide: ClipSide;
+  motionStyle: MotionStyle;
+  animDelay: number;
+}
+
 export type ExportLayer = 'titles' | 'patterns' | 'dots';
 
 export interface AnimationState {
@@ -145,5 +159,6 @@ export interface AnimationState {
   patternProgress: Map<string, number>;
   squareClips: Map<string, { x: number; y: number; w: number; h: number }>;
   squareProgress: Map<string, number>;
+  letterProgress: Map<string, number>;
   dotOpacities: Map<string, number>;
 }

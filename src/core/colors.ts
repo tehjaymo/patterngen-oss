@@ -77,3 +77,7 @@ export function generateDotColor(enabledColors: string[], rand: () => number = M
   const pair = pairs[Math.floor(rand() * pairs.length)];
   return pair.fg === '#000000' ? pair.bg : pair.fg;
 }
+
+export function generateLetterColor(enabledColors: string[], rand: () => number = Math.random): string {
+  return generateDotColor(enabledColors, rand);
+}

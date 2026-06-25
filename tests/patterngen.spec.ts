@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const scenePath = path.join(__dirname, 'fixtures', 'basic-scene.json');
+const textWithRectangleScenePath = path.join(__dirname, 'fixtures', 'text-with-rectangle-scene.json');
 
 type MotionStyle =
   | 'center-wipe'
@@ -27,9 +28,11 @@ interface AppSnapshot {
   }>;
   squares: Array<{ id: string; motionStyle: MotionStyle; clipSide: ClipSide }>;
   dots: Array<{ id: string; blinkPhase: number; blinkSpeed: number }>;
+  letters: Array<{ id: string; char: string; motionStyle: MotionStyle; clipSide: ClipSide }>;
   selectedElement: null | { scope: 'element' | 'layer'; kind: string; id?: string };
   theme: 'dark' | 'light';
   showGrid: boolean;
+  generationMode: 'marks' | 'letters';
 }
 
 declare global {
@@ -40,9 +43,11 @@ declare global {
         titles: AppSnapshot['titles'];
         squares: AppSnapshot['squares'];
         dots: AppSnapshot['dots'];
+        letters: AppSnapshot['letters'];
         selectedElement: AppSnapshot['selectedElement'];
         theme: AppSnapshot['theme'];
         showGrid: boolean;
+        generationMode: AppSnapshot['generationMode'];
       };
     };
   }
@@ -72,24 +77,35 @@ async function appState(page: Page): Promise<AppSnapshot> {
         blinkPhase: dot.blinkPhase,
         blinkSpeed: dot.blinkSpeed,
       })),
+      letters: state.letters.map((letter) => ({
+        id: letter.id,
+        char: letter.char,
+        motionStyle: letter.motionStyle,
+        clipSide: letter.clipSide,
+      })),
       selectedElement: state.selectedElement,
       theme: state.theme,
       showGrid: state.showGrid,
+      generationMode: state.generationMode,
     };
   });
 }
 
-async function loadBasicScene(page: Page): Promise<AppSnapshot> {
+async function loadScene(page: Page, filePath: string): Promise<AppSnapshot> {
   await page.goto('/');
   const fileChooserPromise = page.waitForEvent('filechooser');
   await page.getByTestId('load-button').click();
   const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles(scenePath);
+  await fileChooser.setFiles(filePath);
 
-  await expect.poll(async () => (await appState(page)).titles.length).toBe(1);
+  await expect.poll(async () => (await appState(page)).titles.length).toBeGreaterThan(0);
   await expect.poll(async () => (await appState(page)).squares.length).toBeGreaterThan(0);
   await expect.poll(async () => (await appState(page)).dots.length).toBeGreaterThan(0);
   return appState(page);
+}
+
+async function loadBasicScene(page: Page): Promise<AppSnapshot> {
+  return loadScene(page, scenePath);
 }
 
 test('boots to the editor shell', async ({ page }) => {
@@ -178,6 +194,33 @@ test('randomizes square reveals and dot pulse settings independently', async ({ 
   expect(afterDots).toHaveLength(beforeDots.length);
   expect(afterDots.some((dot, index) => dot.blinkPhase !== beforeDots[index].blinkPhase)).toBe(true);
   expect(afterDots.some((dot, index) => dot.blinkSpeed !== beforeDots[index].blinkSpeed)).toBe(true);
+});
+
+test('generates title letter glyphs instead of squares while keeping dots', async ({ page }) => {
+  await loadBasicScene(page);
+
+  await page.getByTestId('generation-mode-letters').click();
+
+  await expect.poll(async () => (await appState(page)).generationMode).toBe('letters');
+  await expect.poll(async () => (await appState(page)).letters.length).toBeGreaterThan(0);
+
+  const state = await appState(page);
+  expect(state.squares).toHaveLength(0);
+  expect(state.dots.length).toBeGreaterThan(0);
+  expect(new Set(state.letters.map((letter) => letter.char))).toEqual(new Set(['E', '2']));
+  await expect(page.getByTestId('layer-group-letter')).toContainText(String(state.letters.length));
+});
+
+test('uses only text metadata when generating title letter glyphs', async ({ page }) => {
+  await loadScene(page, textWithRectangleScenePath);
+
+  await page.getByTestId('generation-mode-letters').click();
+  await expect.poll(async () => (await appState(page)).letters.length).toBeGreaterThan(0);
+
+  const state = await appState(page);
+  const allowed = new Set(Array.from('PERMANENTLYMOVED'));
+  expect(state.letters.every((letter) => allowed.has(letter.char))).toBe(true);
+  expect(state.letters.some((letter) => letter.char === 'G')).toBe(false);
 });
 
 test('keeps the right sidebar scrollable when layer controls are present', async ({ page }) => {

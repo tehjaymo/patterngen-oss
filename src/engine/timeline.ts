@@ -2,6 +2,7 @@ import type {
   TitleElement,
   PatternElement,
   SquareElement,
+  LetterElement,
   DotElement,
   AnimationState,
 } from '../types';
@@ -19,6 +20,7 @@ export function evaluate(
   titles: TitleElement[],
   patterns: PatternElement[],
   squares: SquareElement[],
+  letters: LetterElement[],
   dots: DotElement[],
   easing: EasingName,
   stagger: number = 2,
@@ -28,6 +30,7 @@ export function evaluate(
   const patternProgress = new Map<string, number>();
   const squareClips = new Map<string, { x: number; y: number; w: number; h: number }>();
   const squareProgress = new Map<string, number>();
+  const letterProgress = new Map<string, number>();
   const dotOpacities = new Map<string, number>();
 
   const dur = Math.max(1, durationMs);
@@ -57,6 +60,7 @@ export function evaluate(
       squareClips.set(sq.id, { x: sq.x, y: sq.y, w: 0, h: 0 });
       squareProgress.set(sq.id, 0);
     }
+    for (const letter of letters) letterProgress.set(letter.id, 0);
     for (const dot of dots) dotOpacities.set(dot.id, 0);
   } else {
     const cycleMs = afterTitle % cycleLen;
@@ -90,6 +94,14 @@ export function evaluate(
       }
     }
 
+    for (const letter of letters) {
+      const staggeredStart = letter.animDelay * staggerWindow * dur;
+      const elemDur = dur * (1 - staggerWindow);
+      const localMs = cycleMs - staggeredStart;
+      const p = Math.max(0, Math.min(1, localMs / elemDur));
+      letterProgress.set(letter.id, applyEasing(p, easing));
+    }
+
     const inHold = cycleMs >= revealEnd;
     for (const dot of dots) {
       if (!inHold) {
@@ -101,7 +113,7 @@ export function evaluate(
     }
   }
 
-  return { t: elapsedMs / dur, titleClips, titleProgress, patternProgress, squareClips, squareProgress, dotOpacities };
+  return { t: elapsedMs / dur, titleClips, titleProgress, patternProgress, squareClips, squareProgress, letterProgress, dotOpacities };
 }
 
 const DOT_LOOP_MS = 4000;

@@ -5,7 +5,7 @@ import { exportAll } from '../export/exporter';
 export const Header: React.FC = () => {
   const {
     playing, setPlaying, elapsedMs, setElapsedMs,
-    generate, durationMs, setDuration, easing, stagger, titles, patterns, squares, dots,
+    generate, durationMs, setDuration, easing, stagger, titles, patterns, squares, dots, letters,
     patternDefsMap, exporting, setExporting, setExportProgress, exportProgress,
     saveSceneToFile, loadSceneFromFile,
     sceneName, setSceneName,
@@ -42,13 +42,14 @@ export const Header: React.FC = () => {
         patterns,
         squares,
         dots,
+        letters,
         patternDefs: patternDefsMap,
         onProgress: (done, total) => setExportProgress(done / total),
       });
     } finally {
       setExporting(false);
     }
-  }, [sceneName, durationMs, easing, stagger, titles, patterns, squares, dots, patternDefsMap, setExporting, setExportProgress]);
+  }, [sceneName, durationMs, easing, stagger, titles, patterns, squares, dots, letters, patternDefsMap, setExporting, setExportProgress]);
 
   return (
     <header style={styles.header}>

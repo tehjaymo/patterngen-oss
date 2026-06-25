@@ -7,10 +7,12 @@ import {
   type PatternElement,
   type SquareElement,
   type DotElement,
+  type LetterElement,
+  type GenerationMode,
   DEFAULT_ELEMENT_MOTION,
 } from '../types';
 import { GridOccupancy, shuffle } from './grid';
-import { generatePalette, generateSquareColor, generateDotColor } from './colors';
+import { generatePalette, generateSquareColor, generateDotColor, generateLetterColor } from './colors';
 
 let placeId = 0;
 const nextId = () => `p_${++placeId}`;
@@ -118,6 +120,18 @@ function pickVaried(defs: PatternDef[], count: number, rand: () => number): Patt
   return result;
 }
 
+function titleLetterPool(titles: TitleElement[]): string[] {
+  const text = titles
+    .map((title) => (
+      title.text?.trim() ||
+      title.textNodes?.map((node) => node.text).join(' ').trim() ||
+      ''
+    ))
+    .join(' ');
+
+  return Array.from(text.toUpperCase()).filter((char) => /\S/.test(char));
+}
+
 export function generatePlacement(
   titles: TitleElement[],
   enabledDefs: PatternDef[],
@@ -125,11 +139,12 @@ export function generatePlacement(
   density: number,
   proximity: number,
   rand: () => number = Math.random,
-): { patterns: PatternElement[]; squares: SquareElement[]; dots: DotElement[] } {
+  generationMode: GenerationMode = 'marks',
+): { patterns: PatternElement[]; squares: SquareElement[]; dots: DotElement[]; letters: LetterElement[] } {
   const grid = new GridOccupancy();
   placeId = 0;
 
-  if (titles.length === 0) return { patterns: [], squares: [], dots: [] };
+  if (titles.length === 0) return { patterns: [], squares: [], dots: [], letters: [] };
 
   for (const t of titles) {
     grid.markRect(t.x, t.y, t.w, t.h);
@@ -144,6 +159,7 @@ export function generatePlacement(
   const patterns: PatternElement[] = [];
   const squares: SquareElement[] = [];
   const dots: DotElement[] = [];
+  const letters: LetterElement[] = [];
 
   const colorPairs = generatePalette(enabledColors);
 
@@ -153,6 +169,7 @@ export function generatePlacement(
   const target40   = Math.max(0, Math.round(1 + 2 * d2));
   const target20   = Math.max(0, Math.round(1 + 3 * d2));
   const targetDots = Math.max(2, Math.round(5 + 50 * d2));
+  const targetLetters = Math.max(2, Math.round(6 + 56 * d2));
 
   const pickClipSide = () => CLIP_SIDES[Math.floor(rand() * 4)];
 
@@ -173,7 +190,7 @@ export function generatePlacement(
     }
   }
 
-  if (enabledColors.length > 0 && target80 > 0) {
+  if (generationMode === 'marks' && enabledColors.length > 0 && target80 > 0) {
     const cands = candidatesInRadius(grid, 4, 4, distMap, maxRadius, 4);
     for (const [c, r] of placeBlocks(grid, cands, 4, 4, target80, rand)) {
       squares.push({
@@ -186,7 +203,7 @@ export function generatePlacement(
     }
   }
 
-  if (enabledColors.length > 0 && target40 > 0) {
+  if (generationMode === 'marks' && enabledColors.length > 0 && target40 > 0) {
     const cands = candidatesInRadius(grid, 2, 2, distMap, maxRadius, 2);
     for (const [c, r] of placeBlocks(grid, cands, 2, 2, target40, rand)) {
       squares.push({
@@ -199,7 +216,7 @@ export function generatePlacement(
     }
   }
 
-  if (enabledColors.length > 0 && target20 > 0) {
+  if (generationMode === 'marks' && enabledColors.length > 0 && target20 > 0) {
     const cands = grid.findFreeCells().filter(([c, r]) => distMap[r][c] <= maxRadius);
     for (const [c, r] of placeCells(grid, cands, target20, rand)) {
       squares.push({
@@ -225,5 +242,25 @@ export function generatePlacement(
     }
   }
 
-  return { patterns, squares, dots };
+  if (generationMode === 'letters') {
+    const letterPool = titleLetterPool(titles);
+    const cands = grid.findFreeCells().filter(([c, r]) => distMap[r][c] <= dotRadius);
+    for (const [c, r] of placeCells(grid, cands, targetLetters, rand)) {
+      if (letterPool.length === 0) break;
+      const char = letterPool[Math.floor(rand() * letterPool.length)];
+      letters.push({
+        id: nextId(),
+        char,
+        x: c * GRID_SIZE,
+        y: r * GRID_SIZE,
+        size: GRID_SIZE,
+        color: generateLetterColor(enabledColors, rand),
+        clipSide: pickClipSide(),
+        motionStyle: DEFAULT_ELEMENT_MOTION,
+        animDelay: rand(),
+      });
+    }
+  }
+
+  return { patterns, squares, dots, letters };
 }
