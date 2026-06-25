@@ -85,7 +85,7 @@ export const Sidebar: React.FC = () => {
   const selectedMotion = getSelectedMotion(selectedElement, layers);
 
   return (
-    <aside style={styles.sidebar}>
+    <aside data-testid="sidebar" style={styles.sidebar}>
       {(layerGroups.length > 0 || layers.length > 0) && (
         <div style={styles.section}>
           <div style={styles.sectionTitle}>LAYERS</div>
@@ -95,6 +95,7 @@ export const Sidebar: React.FC = () => {
                 const selected = selectedElement?.scope === 'layer' && selectedElement.kind === group.kind;
                 return (
                   <button
+                    data-testid={`layer-group-${group.kind}`}
                     key={group.kind}
                     onClick={() => selectLayer(group.kind)}
                     style={{ ...styles.layerGroupBtn, ...(selected ? styles.layerGroupBtnSelected : {}) }}
@@ -114,6 +115,7 @@ export const Sidebar: React.FC = () => {
                 selectedElement.id === layer.id;
               return (
                 <button
+                  data-testid={`layer-row-${layer.kind}-${layer.id}`}
                   key={`${layer.kind}:${layer.id}`}
                   onClick={() => selectElement(layer.kind, layer.id)}
                   style={{ ...styles.layerRow, ...(selected ? styles.layerRowSelected : {}) }}
@@ -130,7 +132,7 @@ export const Sidebar: React.FC = () => {
       {selectedElement && (
         <div style={styles.section}>
           <div style={styles.sectionTitle}>MOTION</div>
-          <button onClick={randomizeSelectedMotion} style={{ ...styles.randomBtn, width: CONTENT_W }}>
+          <button data-testid="motion-random-button" onClick={randomizeSelectedMotion} style={{ ...styles.randomBtn, width: CONTENT_W }}>
             RANDOM
           </button>
           {selectedMotion && (
@@ -138,6 +140,7 @@ export const Sidebar: React.FC = () => {
               <div style={{ ...styles.motionGrid, width: CONTENT_W }}>
                 {MOTION_OPTIONS.map((option) => (
                   <button
+                    data-testid={`motion-style-${option.value}`}
                     key={option.value}
                     onClick={() => setSelectedMotionStyle(option.value)}
                     style={{
@@ -152,6 +155,7 @@ export const Sidebar: React.FC = () => {
               <div style={{ ...styles.directionGrid, width: CONTENT_W }}>
                 {CLIP_OPTIONS.map((option) => (
                   <button
+                    data-testid={`motion-direction-${option.value}`}
                     key={option.value}
                     onClick={() => setSelectedClipSide(option.value)}
                     style={{

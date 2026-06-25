@@ -1,0 +1,22 @@
+{
+  "sceneName": "e2e_scene",
+  "seed": 123456,
+  "titles": [
+    {
+      "id": "el_1",
+      "dataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iMTYwIiB2aWV3Qm94PSIwIDAgNDAwIDE2MCI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSIxNjAiIGZpbGw9IndoaXRlIi8+PHRleHQgeD0iMzAiIHk9Ijk1IiBmb250LXNpemU9IjY0IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZpbGw9ImJsYWNrIj5FMkU8L3RleHQ+PC9zdmc+",
+      "x": 760,
+      "y": 460,
+      "w": 400,
+      "h": 160
+    }
+  ],
+  "durationMs": 6000,
+  "easing": "easeOutCubic",
+  "density": 14,
+  "proximity": 6,
+  "stagger": 3,
+  "theme": "dark",
+  "enabledColors": ["#000000", "#FFFFFF", "#E45C3A", "#3A7DE4"],
+  "customColors": ["#E45C3A", "#3A7DE4"]
+}

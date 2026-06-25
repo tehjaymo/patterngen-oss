@@ -225,6 +225,7 @@ export const CanvasView: React.FC = () => {
         onDrop={handleDrop}
       >
         <canvas
+          data-testid="pattern-canvas"
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}

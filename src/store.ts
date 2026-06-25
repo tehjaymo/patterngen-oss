@@ -596,3 +596,10 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 }));
+
+const e2eEnabled =
+  (import.meta as unknown as { env?: { VITE_E2E?: string } }).env?.VITE_E2E === '1';
+
+if (e2eEnabled && typeof window !== 'undefined') {
+  (window as typeof window & { __PATTERNGEN_STORE__?: typeof useStore }).__PATTERNGEN_STORE__ = useStore;
+}

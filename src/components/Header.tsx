@@ -54,9 +54,10 @@ export const Header: React.FC = () => {
     <header style={styles.header}>
       <div style={styles.left}>
         <span style={styles.brand}>PATTERNGEN</span>
-        <button style={styles.linkBtn} onClick={saveSceneToFile}>SAVE</button>
-        <button style={styles.linkBtn} onClick={loadSceneFromFile}>LOAD</button>
+        <button data-testid="save-button" style={styles.linkBtn} onClick={saveSceneToFile}>SAVE</button>
+        <button data-testid="load-button" style={styles.linkBtn} onClick={loadSceneFromFile}>LOAD</button>
         <button
+          data-testid="export-button"
           style={{ ...styles.linkBtn, opacity: exporting ? 0.5 : 1 }}
           onClick={handleExport}
           disabled={exporting}
@@ -67,6 +68,7 @@ export const Header: React.FC = () => {
 
       <div style={styles.right}>
         <input
+          data-testid="scene-name-input"
           type="text"
           className="auto-input"
           value={sceneName}
@@ -74,8 +76,9 @@ export const Header: React.FC = () => {
           size={Math.max(5, sceneName.length)}
           placeholder="scene name"
         />
-        <button style={styles.linkBtn} onClick={() => { generate(); }}>GENERATE</button>
+        <button data-testid="generate-button" style={styles.linkBtn} onClick={() => { generate(); }}>GENERATE</button>
         <input
+          data-testid="duration-input"
           type="number"
           className="auto-input"
           min={100}
@@ -87,6 +90,7 @@ export const Header: React.FC = () => {
         />
         <span style={styles.msLabel}>MS</span>
         <button
+          data-testid="play-button"
           style={styles.linkBtn}
           onClick={() => {
             if (playing) setPlaying(false);
