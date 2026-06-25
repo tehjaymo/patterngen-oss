@@ -24,8 +24,10 @@ export function evaluate(
   stagger: number = 2,
 ): AnimationState {
   const titleClips = new Map<string, { x: number; y: number; w: number; h: number }>();
+  const titleProgress = new Map<string, number>();
   const patternProgress = new Map<string, number>();
   const squareClips = new Map<string, { x: number; y: number; w: number; h: number }>();
+  const squareProgress = new Map<string, number>();
   const dotOpacities = new Map<string, number>();
 
   const dur = Math.max(1, durationMs);
@@ -34,6 +36,7 @@ export function evaluate(
   const titleEased = applyEasing(titleT, easing);
 
   for (const title of titles) {
+    titleProgress.set(title.id, titleEased);
     if (title.w >= title.h) {
       const halfReveal = (title.w / 2) * titleEased;
       const cx = title.x + title.w / 2;
@@ -52,6 +55,7 @@ export function evaluate(
     for (const pat of patterns) patternProgress.set(pat.id, 0);
     for (const sq of squares) {
       squareClips.set(sq.id, { x: sq.x, y: sq.y, w: 0, h: 0 });
+      squareProgress.set(sq.id, 0);
     }
     for (const dot of dots) dotOpacities.set(dot.id, 0);
   } else {
@@ -72,6 +76,7 @@ export function evaluate(
       const elemDur = dur * (1 - staggerWindow);
       const localMs = cycleMs - staggeredStart;
       const p = applyEasing(Math.max(0, Math.min(1, localMs / elemDur)), easing);
+      squareProgress.set(sq.id, p);
       const s = sq.size;
       switch (sq.clipSide) {
         case 'left':
@@ -96,7 +101,7 @@ export function evaluate(
     }
   }
 
-  return { t: elapsedMs / dur, titleClips, patternProgress, squareClips, dotOpacities };
+  return { t: elapsedMs / dur, titleClips, titleProgress, patternProgress, squareClips, squareProgress, dotOpacities };
 }
 
 const DOT_LOOP_MS = 4000;

@@ -6,8 +6,13 @@ import type {
   DotElement,
   PatternDef,
   ColorPair,
+  MotionStyle,
+  ClipSide,
+  SelectedElement,
+  SelectableElementKind,
+  SelectableLayerKind,
 } from './types';
-import { FIXED_COLORS, DEFAULT_CUSTOM_COLORS } from './types';
+import { FIXED_COLORS, DEFAULT_CUSTOM_COLORS, DEFAULT_TITLE_MOTION, DEFAULT_ELEMENT_MOTION } from './types';
 import type { EasingName } from './engine/easing';
 import { loadAllPatterns } from './core/patterns';
 import { generatePlacement } from './core/placement';
@@ -21,6 +26,8 @@ interface SavedTitle {
   y: number;
   w: number;
   h: number;
+  motionStyle?: MotionStyle;
+  clipSide?: ClipSide;
 }
 
 interface SavedScene {
@@ -86,6 +93,7 @@ interface AppState {
   bgImageDataUrl: string | null;
 
   logoColors: ColorPair[];
+  selectedElement: SelectedElement | null;
 
   playing: boolean;
   elapsedMs: number;
@@ -122,10 +130,47 @@ interface AppState {
   loadSceneFromFile: () => void;
   setBgImage: (img: HTMLImageElement, dataUrl: string) => void;
   clearBgImage: () => void;
+  selectElement: (kind: SelectableElementKind, id: string) => void;
+  selectLayer: (kind: SelectableLayerKind) => void;
+  clearSelection: () => void;
+  setSelectedMotionStyle: (style: MotionStyle) => void;
+  setSelectedClipSide: (side: ClipSide) => void;
+  randomizeSelectedMotion: () => void;
 }
 
 let idCounter = 0;
 const nextId = () => `el_${++idCounter}`;
+const RANDOM_MOTION_STYLES: MotionStyle[] = [
+  'center-wipe',
+  'wipe',
+  'dissolve',
+  'scale',
+  'slide-up',
+  'slide-down',
+  'slide-left',
+  'slide-right',
+];
+const RANDOM_CLIP_SIDES: ClipSide[] = ['top', 'bottom', 'left', 'right'];
+
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function randomDotMotion(dot: DotElement): DotElement {
+  return {
+    ...dot,
+    blinkPhase: Math.random(),
+    blinkSpeed: 0.15 + Math.random() * 0.25,
+  };
+}
+
+function randomElementMotion<T extends { motionStyle: MotionStyle; clipSide: ClipSide }>(element: T): T {
+  return {
+    ...element,
+    motionStyle: pickRandom(RANDOM_MOTION_STYLES),
+    clipSide: pickRandom(RANDOM_CLIP_SIDES),
+  };
+}
 
 export const useStore = create<AppState>((set, get) => ({
   patternDefs: [],
@@ -155,6 +200,7 @@ export const useStore = create<AppState>((set, get) => ({
   bgImageDataUrl: null,
 
   logoColors: [],
+  selectedElement: null,
 
   playing: false,
   elapsedMs: 0,
@@ -244,7 +290,13 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   addTitle(img, x, y, w, h) {
-    set((s) => ({ titles: [...s.titles, { id: nextId(), img, x, y, w, h }] }));
+    set((s) => ({
+      titles: [...s.titles, {
+        id: nextId(), img, x, y, w, h,
+        motionStyle: DEFAULT_TITLE_MOTION,
+        clipSide: 'left',
+      }],
+    }));
   },
 
   moveTitle(id, x, y) {
@@ -252,7 +304,14 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   removeTitle(id) {
-    set((s) => ({ titles: s.titles.filter((t) => t.id !== id) }));
+    set((s) => ({
+      titles: s.titles.filter((t) => t.id !== id),
+      selectedElement: s.selectedElement?.scope === 'element' &&
+        s.selectedElement.kind === 'title' &&
+        s.selectedElement.id === id
+        ? null
+        : s.selectedElement,
+    }));
   },
 
   generate(seed) {
@@ -268,7 +327,7 @@ export const useStore = create<AppState>((set, get) => ({
     for (let i = 0; i < 3; i++) {
       logoColors.push(palette.length > 0 ? palette[Math.floor(rand() * palette.length)] : { bg: '#404040', fg: '#888888' });
     }
-    set({ seed: useSeed, patterns, squares, dots, logoColors, elapsedMs: 3 * s.durationMs, playing: false });
+    set({ seed: useSeed, patterns, squares, dots, logoColors, elapsedMs: 3 * s.durationMs, playing: false, selectedElement: null });
   },
 
   setPlaying(p) { set({ playing: p }); },
@@ -286,7 +345,14 @@ export const useStore = create<AppState>((set, get) => ({
         sceneName: s.sceneName,
         seed: s.seed,
         titles: s.titles.map((t) => ({
-          id: t.id, dataUrl: imgToDataUrl(t.img, t.w, t.h), x: t.x, y: t.y, w: t.w, h: t.h,
+          id: t.id,
+          dataUrl: imgToDataUrl(t.img, t.w, t.h),
+          x: t.x,
+          y: t.y,
+          w: t.w,
+          h: t.h,
+          motionStyle: t.motionStyle,
+          clipSide: t.clipSide,
         })),
         durationMs: s.durationMs,
         easing: s.easing,
@@ -326,7 +392,16 @@ export const useStore = create<AppState>((set, get) => ({
         const titles: TitleElement[] = [];
         for (const st of saved.titles) {
           const img = await dataUrlToImg(st.dataUrl);
-          titles.push({ id: st.id, img, x: st.x, y: st.y, w: st.w, h: st.h });
+          titles.push({
+            id: st.id,
+            img,
+            x: st.x,
+            y: st.y,
+            w: st.w,
+            h: st.h,
+            motionStyle: st.motionStyle ?? DEFAULT_TITLE_MOTION,
+            clipSide: st.clipSide ?? 'left',
+          });
         }
         const maxId = titles.length > 0
           ? Math.max(...titles.map((t) => parseInt(t.id.replace('el_', '')) || 0))
@@ -338,8 +413,16 @@ export const useStore = create<AppState>((set, get) => ({
           sceneName: saved.sceneName ?? 'scene',
           seed,
           titles,
-          patterns: saved.patterns ?? [],
-          squares: saved.squares ?? [],
+          patterns: (saved.patterns ?? []).map((p) => ({
+            ...p,
+            motionStyle: p.motionStyle ?? DEFAULT_ELEMENT_MOTION,
+            clipSide: p.clipSide ?? 'left',
+          })),
+          squares: (saved.squares ?? []).map((sq) => ({
+            ...sq,
+            motionStyle: sq.motionStyle ?? DEFAULT_ELEMENT_MOTION,
+            clipSide: sq.clipSide ?? 'left',
+          })),
           dots: saved.dots ?? [],
           durationMs: saved.durationMs ?? 6000,
           easing: saved.easing ?? 'easeOutCubic',
@@ -352,6 +435,7 @@ export const useStore = create<AppState>((set, get) => ({
           enabledPatterns: new Set(
             saved.enabledPatterns !== undefined ? saved.enabledPatterns : allPatternIds,
           ),
+          selectedElement: null,
         });
         if (typeof document !== 'undefined') {
           document.documentElement.dataset.theme = saved.theme ?? 'dark';
@@ -369,5 +453,146 @@ export const useStore = create<AppState>((set, get) => ({
       }
     };
     input.click();
+  },
+
+  selectElement(kind, id) {
+    set({ selectedElement: { scope: 'element', kind, id } });
+  },
+
+  selectLayer(kind) {
+    set({ selectedElement: { scope: 'layer', kind } });
+  },
+
+  clearSelection() {
+    set({ selectedElement: null });
+  },
+
+  setSelectedMotionStyle(style) {
+    set((s) => {
+      const selected = s.selectedElement;
+      if (!selected) return {};
+      if (selected.scope === 'layer') {
+        if (selected.kind === 'title') {
+          return { titles: s.titles.map((t) => ({ ...t, motionStyle: style })) };
+        }
+        if (selected.kind === 'pattern') {
+          return { patterns: s.patterns.map((p) => ({ ...p, motionStyle: style })) };
+        }
+        if (selected.kind === 'square') {
+          return { squares: s.squares.map((sq) => ({ ...sq, motionStyle: style })) };
+        }
+        return {};
+      }
+      if (selected.kind === 'title') {
+        return {
+          titles: s.titles.map((t) => (
+            t.id === selected.id ? { ...t, motionStyle: style } : t
+          )),
+        };
+      }
+      if (selected.kind === 'pattern') {
+        return {
+          patterns: s.patterns.map((p) => (
+            p.id === selected.id ? { ...p, motionStyle: style } : p
+          )),
+        };
+      }
+      if (selected.kind === 'square') {
+        return {
+          squares: s.squares.map((sq) => (
+            sq.id === selected.id ? { ...sq, motionStyle: style } : sq
+          )),
+        };
+      }
+      return {};
+    });
+  },
+
+  setSelectedClipSide(side) {
+    set((s) => {
+      const selected = s.selectedElement;
+      if (!selected) return {};
+      if (selected.scope === 'layer') {
+        if (selected.kind === 'title') {
+          return { titles: s.titles.map((t) => ({ ...t, clipSide: side })) };
+        }
+        if (selected.kind === 'pattern') {
+          return { patterns: s.patterns.map((p) => ({ ...p, clipSide: side })) };
+        }
+        if (selected.kind === 'square') {
+          return { squares: s.squares.map((sq) => ({ ...sq, clipSide: side })) };
+        }
+        return {};
+      }
+      if (selected.kind === 'title') {
+        return {
+          titles: s.titles.map((t) => (
+            t.id === selected.id ? { ...t, clipSide: side } : t
+          )),
+        };
+      }
+      if (selected.kind === 'pattern') {
+        return {
+          patterns: s.patterns.map((p) => (
+            p.id === selected.id ? { ...p, clipSide: side } : p
+          )),
+        };
+      }
+      if (selected.kind === 'square') {
+        return {
+          squares: s.squares.map((sq) => (
+            sq.id === selected.id ? { ...sq, clipSide: side } : sq
+          )),
+        };
+      }
+      return {};
+    });
+  },
+
+  randomizeSelectedMotion() {
+    set((s) => {
+      const selected = s.selectedElement;
+      if (!selected) return {};
+
+      if (selected.scope === 'layer') {
+        if (selected.kind === 'title') {
+          return { titles: s.titles.map(randomElementMotion) };
+        }
+        if (selected.kind === 'pattern') {
+          return { patterns: s.patterns.map(randomElementMotion) };
+        }
+        if (selected.kind === 'square') {
+          return { squares: s.squares.map(randomElementMotion) };
+        }
+        return { dots: s.dots.map(randomDotMotion) };
+      }
+
+      if (selected.kind === 'title') {
+        return {
+          titles: s.titles.map((t) => (
+            t.id === selected.id ? randomElementMotion(t) : t
+          )),
+        };
+      }
+      if (selected.kind === 'pattern') {
+        return {
+          patterns: s.patterns.map((p) => (
+            p.id === selected.id ? randomElementMotion(p) : p
+          )),
+        };
+      }
+      if (selected.kind === 'square') {
+        return {
+          squares: s.squares.map((sq) => (
+            sq.id === selected.id ? randomElementMotion(sq) : sq
+          )),
+        };
+      }
+      return {
+        dots: s.dots.map((dot) => (
+          dot.id === selected.id ? randomDotMotion(dot) : dot
+        )),
+      };
+    });
   },
 }));

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useStore } from '../store';
-import { CANVAS_W, CANVAS_H } from '../types';
+import { CANVAS_W, CANVAS_H, GRID_SIZE, type SelectedElement, type SelectedSingleElement, type TitleElement, type PatternElement, type SquareElement, type DotElement } from '../types';
 import { snapToGrid } from '../core/grid';
 import { evaluate } from '../engine/timeline';
 import { renderFrame, drawGrid } from '../export/renderer';
@@ -19,6 +19,7 @@ export const CanvasView: React.FC = () => {
     addTitle, moveTitle, removeTitle,
     showGrid: gridOn, bgImage, clearBgImage,
     setBgImage, setElapsedMs, setPlaying,
+    selectedElement, selectElement, clearSelection,
   } = useStore();
 
   useEffect(() => {
@@ -45,10 +46,13 @@ export const CanvasView: React.FC = () => {
     let cancelled = false;
     const state = evaluate(elapsedMs, durationMs, titles, patterns, squares, dots, easing, stagger);
     renderFrame(ctx, state, titles, patterns, squares, dots, patternDefsMap, 1, undefined, CANVAS_BG, bgImage).then(() => {
-      if (!cancelled && !playing && gridOn) drawGrid(ctx, 1);
+      if (!cancelled) {
+        if (!playing && gridOn) drawGrid(ctx, 1);
+        drawSelection(ctx, selectedElement, titles, patterns, squares, dots);
+      }
     });
     return () => { cancelled = true; };
-  }, [elapsedMs, durationMs, titles, patterns, squares, dots, easing, stagger, patternDefsMap, playing, gridOn, bgImage]);
+  }, [elapsedMs, durationMs, titles, patterns, squares, dots, easing, stagger, patternDefsMap, playing, gridOn, bgImage, selectedElement]);
 
   const toCanvasCoords = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current!;
@@ -106,10 +110,43 @@ export const CanvasView: React.FC = () => {
 
   const dragState = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
 
+  const hitTest = useCallback((mx: number, my: number): SelectedSingleElement | null => {
+    for (let i = titles.length - 1; i >= 0; i--) {
+      const t = titles[i];
+      if (mx >= t.x && mx <= t.x + t.w && my >= t.y && my <= t.y + t.h) {
+        return { scope: 'element', kind: 'title', id: t.id };
+      }
+    }
+    for (let i = squares.length - 1; i >= 0; i--) {
+      const sq = squares[i];
+      if (mx >= sq.x && mx <= sq.x + sq.size && my >= sq.y && my <= sq.y + sq.size) {
+        return { scope: 'element', kind: 'square', id: sq.id };
+      }
+    }
+    const patternSize = GRID_SIZE * 2;
+    for (let i = patterns.length - 1; i >= 0; i--) {
+      const pat = patterns[i];
+      if (mx >= pat.x && mx <= pat.x + patternSize && my >= pat.y && my <= pat.y + patternSize) {
+        return { scope: 'element', kind: 'pattern', id: pat.id };
+      }
+    }
+    for (let i = dots.length - 1; i >= 0; i--) {
+      const dot = dots[i];
+      if (mx >= dot.x && mx <= dot.x + 8 && my >= dot.y && my <= dot.y + 8) {
+        return { scope: 'element', kind: 'dot', id: dot.id };
+      }
+    }
+    return null;
+  }, [titles, squares, patterns, dots]);
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
       const { x: mx, y: my } = toCanvasCoords(e.clientX, e.clientY);
+      const hit = hitTest(mx, my);
+      if (hit) selectElement(hit.kind, hit.id);
+      else clearSelection();
+
       for (let i = titles.length - 1; i >= 0; i--) {
         const t = titles[i];
         if (mx >= t.x && mx <= t.x + t.w && my >= t.y && my <= t.y + t.h) {
@@ -118,7 +155,7 @@ export const CanvasView: React.FC = () => {
         }
       }
     },
-    [titles, toCanvasCoords],
+    [titles, toCanvasCoords, hitTest, selectElement, clearSelection],
   );
 
   const handleMouseMove = useCallback(
@@ -233,6 +270,65 @@ export const CanvasView: React.FC = () => {
     </div>
   );
 };
+
+function drawSelection(
+  ctx: CanvasRenderingContext2D,
+  selected: SelectedElement | null,
+  titles: TitleElement[],
+  patterns: PatternElement[],
+  squares: SquareElement[],
+  dots: DotElement[],
+) {
+  if (!selected) return;
+
+  const bounds = getSelectionBounds(selected, titles, patterns, squares, dots);
+  if (bounds.length === 0) return;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 5]);
+  for (const b of bounds) {
+    ctx.strokeRect(b.x - 4, b.y - 4, b.w + 8, b.h + 8);
+  }
+  ctx.restore();
+}
+
+function getSelectionBounds(
+  selected: SelectedElement,
+  titles: TitleElement[],
+  patterns: PatternElement[],
+  squares: SquareElement[],
+  dots: DotElement[],
+): Array<{ x: number; y: number; w: number; h: number }> {
+  if (selected.scope === 'layer') {
+    switch (selected.kind) {
+      case 'title':
+        return titles.map((t) => ({ x: t.x, y: t.y, w: t.w, h: t.h }));
+      case 'pattern':
+        return patterns.map((p) => ({ x: p.x, y: p.y, w: GRID_SIZE * 2, h: GRID_SIZE * 2 }));
+      case 'square':
+        return squares.map((sq) => ({ x: sq.x, y: sq.y, w: sq.size, h: sq.size }));
+      case 'dot':
+        return dots.map((dot) => ({ x: dot.x, y: dot.y, w: 8, h: 8 }));
+    }
+  }
+
+  if (selected.kind === 'title') {
+    const t = titles.find((title) => title.id === selected.id);
+    return t ? [{ x: t.x, y: t.y, w: t.w, h: t.h }] : [];
+  }
+  if (selected.kind === 'pattern') {
+    const p = patterns.find((pat) => pat.id === selected.id);
+    return p ? [{ x: p.x, y: p.y, w: GRID_SIZE * 2, h: GRID_SIZE * 2 }] : [];
+  }
+  if (selected.kind === 'square') {
+    const sq = squares.find((square) => square.id === selected.id);
+    return sq ? [{ x: sq.x, y: sq.y, w: sq.size, h: sq.size }] : [];
+  }
+  const dot = dots.find((d) => d.id === selected.id);
+  return dot ? [{ x: dot.x, y: dot.y, w: 8, h: 8 }] : [];
+}
 
 const styles: Record<string, React.CSSProperties> = {
   wrapper: {

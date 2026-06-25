@@ -82,8 +82,10 @@ export async function exportLayer(
       const state = {
         t: 0,
         titleClips: new Map(),
+        titleProgress: new Map(),
         patternProgress: new Map(),
         squareClips: new Map(),
+        squareProgress: new Map(),
         dotOpacities,
       };
       await renderFrame(ctx, state, titles, patterns, squares, dots, patternDefs, EXPORT_SCALE, layer);

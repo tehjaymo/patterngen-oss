@@ -7,6 +7,7 @@ import {
   type PatternElement,
   type SquareElement,
   type DotElement,
+  DEFAULT_ELEMENT_MOTION,
 } from '../types';
 import { GridOccupancy, shuffle } from './grid';
 import { generatePalette, generateSquareColor, generateDotColor } from './colors';
@@ -14,9 +15,9 @@ import { generatePalette, generateSquareColor, generateDotColor } from './colors
 let placeId = 0;
 const nextId = () => `p_${++placeId}`;
 
-const CLIP_SIDES: Array<'top' | 'bottom' | 'left' | 'right'> = [
+const CLIP_SIDES = [
   'top', 'bottom', 'left', 'right',
-];
+] as const;
 
 function buildProximityMap(titles: TitleElement[]): number[][] {
   const dist: number[][] = Array.from({ length: GRID_ROWS }, () =>
@@ -167,6 +168,7 @@ export function generatePlacement(
         x: c * GRID_SIZE, y: r * GRID_SIZE,
         colors, animDelay: rand(),
         clipSide: pickClipSide(),
+        motionStyle: DEFAULT_ELEMENT_MOTION,
       });
     }
   }
@@ -178,6 +180,7 @@ export function generatePlacement(
         id: nextId(), x: c * GRID_SIZE, y: r * GRID_SIZE, size: 80,
         color: generateSquareColor(enabledColors, rand),
         clipSide: pickClipSide(),
+        motionStyle: DEFAULT_ELEMENT_MOTION,
         animDelay: rand(),
       });
     }
@@ -190,6 +193,7 @@ export function generatePlacement(
         id: nextId(), x: c * GRID_SIZE, y: r * GRID_SIZE, size: 40,
         color: generateSquareColor(enabledColors, rand),
         clipSide: pickClipSide(),
+        motionStyle: DEFAULT_ELEMENT_MOTION,
         animDelay: rand(),
       });
     }
@@ -202,6 +206,7 @@ export function generatePlacement(
         id: nextId(), x: c * GRID_SIZE, y: r * GRID_SIZE, size: 20,
         color: generateSquareColor(enabledColors, rand),
         clipSide: pickClipSide(),
+        motionStyle: DEFAULT_ELEMENT_MOTION,
         animDelay: rand(),
       });
     }

@@ -11,6 +11,37 @@ export const FIXED_COLORS = ['#000000', '#FFFFFF'] as const;
 
 export const DEFAULT_CUSTOM_COLORS: string[] = [];
 
+export type ClipSide = 'top' | 'bottom' | 'left' | 'right';
+
+export type MotionStyle =
+  | 'center-wipe'
+  | 'wipe'
+  | 'dissolve'
+  | 'scale'
+  | 'slide-up'
+  | 'slide-down'
+  | 'slide-left'
+  | 'slide-right';
+
+export const DEFAULT_TITLE_MOTION: MotionStyle = 'center-wipe';
+export const DEFAULT_ELEMENT_MOTION: MotionStyle = 'wipe';
+
+export type SelectableElementKind = 'title' | 'pattern' | 'square' | 'dot';
+export type SelectableLayerKind = SelectableElementKind;
+
+export interface SelectedSingleElement {
+  scope: 'element';
+  kind: SelectableElementKind;
+  id: string;
+}
+
+export interface SelectedLayer {
+  scope: 'layer';
+  kind: SelectableLayerKind;
+}
+
+export type SelectedElement = SelectedSingleElement | SelectedLayer;
+
 export interface ColorPair {
   bg: string;
   fg: string;
@@ -57,6 +88,8 @@ export interface TitleElement {
   y: number;
   w: number;
   h: number;
+  motionStyle: MotionStyle;
+  clipSide: ClipSide;
 }
 
 export interface PatternElement {
@@ -66,7 +99,8 @@ export interface PatternElement {
   y: number;
   colors: ColorPair;
   animDelay: number;
-  clipSide: 'top' | 'bottom' | 'left' | 'right';
+  clipSide: ClipSide;
+  motionStyle: MotionStyle;
 }
 
 export interface SquareElement {
@@ -75,7 +109,8 @@ export interface SquareElement {
   y: number;
   size: number;
   color: string;
-  clipSide: 'top' | 'bottom' | 'left' | 'right';
+  clipSide: ClipSide;
+  motionStyle: MotionStyle;
   animDelay: number;
 }
 
@@ -93,7 +128,9 @@ export type ExportLayer = 'titles' | 'patterns' | 'dots';
 export interface AnimationState {
   t: number;
   titleClips: Map<string, { x: number; y: number; w: number; h: number }>;
+  titleProgress: Map<string, number>;
   patternProgress: Map<string, number>;
   squareClips: Map<string, { x: number; y: number; w: number; h: number }>;
+  squareProgress: Map<string, number>;
   dotOpacities: Map<string, number>;
 }
