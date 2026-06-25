@@ -4,7 +4,7 @@ export const GRID_SIZE = 20;
 export const GRID_COLS = CANVAS_W / GRID_SIZE; // 96
 export const GRID_ROWS = CANVAS_H / GRID_SIZE; // 54
 export const EXPORT_SCALE = 4;
-export const FPS = 24;
+export const FPS = 30;
 export const BG_COLOR = '#323232';
 
 export const FIXED_COLORS = ['#000000', '#FFFFFF'] as const;

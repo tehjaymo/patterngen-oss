@@ -9,6 +9,7 @@ bl_info = {
 }
 
 import os
+import json
 import math
 import bpy
 from bpy.props import StringProperty, IntProperty, PointerProperty
@@ -36,6 +37,25 @@ def _list_pngs(folder):
     )
 
 
+def _load_manifest(root):
+    """Return the parsed manifest.json from the scene root, or None.
+
+    The PatternGen exporter writes manifest.json alongside the layer folders to
+    declare the export contract (fps, frame step, and per-layer image-sequence
+    duration). When present it is the source of truth; when absent (older
+    exports) the importer falls back to counting PNGs.
+    """
+    path = os.path.join(root, "manifest.json")
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else None
+    except (ValueError, OSError):
+        return None
+
+
 def _find_layer_folder(root, layer_name):
     """Return path to <root>/<layer_name> (case-insensitive) if it exists and has PNGs."""
     if not os.path.isdir(root):
@@ -51,7 +71,7 @@ def _find_layer_folder(root, layer_name):
     return None
 
 
-def _make_plane(name, first_png_path, frame_count, cyclic, location):
+def _make_plane(name, first_png_path, frame_duration, cyclic, location):
     """Create a plane, add a PNG-sequence shader, return the object."""
     # Load the first PNG as an image sequence.
     img = bpy.data.images.load(first_png_path, check_existing=True)
@@ -102,7 +122,12 @@ def _make_plane(name, first_png_path, frame_count, cyclic, location):
     tex.interpolation = 'Linear'
 
     iu = tex.image_user
-    iu.frame_duration = max(1, frame_count)
+    # frame_duration is decided by the caller (from the export manifest, or a
+    # fallback heuristic). For a cyclic layer it is one less than the files on
+    # disk: Blender's cyclic resolver overruns the loop by one at the wrap, and
+    # the extra trailing file absorbs that overrun so the seam never requests a
+    # missing frame (which would render as the magenta placeholder).
+    iu.frame_duration = max(1, frame_duration)
     iu.frame_start = 0
     iu.frame_offset = 0
     iu.use_cyclic = cyclic
@@ -179,9 +204,13 @@ class PG_OT_Import(Operator):
             self.report({'ERROR'}, f"Scene folder not found: {root or '(empty)'}")
             return {'CANCELLED'}
 
+        manifest = _load_manifest(root)
+        manifest_layers = (manifest or {}).get("layers", {})
+
         created = []
         missing = []
-        for layer_name, cyclic, y_offset in LAYERS:
+        max_files = 0
+        for layer_name, cyclic_default, y_offset in LAYERS:
             folder = _find_layer_folder(root, layer_name)
             if folder is None:
                 missing.append(layer_name)
@@ -194,11 +223,21 @@ class PG_OT_Import(Operator):
 
             first_png = os.path.join(folder, pngs[0])
             frame_count = len(pngs)
+            max_files = max(max_files, frame_count)
+
+            # Prefer the exporter's declared contract; fall back to a heuristic
+            # for older, manifest-less exports.
+            spec = manifest_layers.get(layer_name, {})
+            cyclic = bool(spec.get("loop", cyclic_default))
+            if "frameDuration" in spec:
+                frame_duration = int(spec["frameDuration"])
+            else:
+                frame_duration = frame_count - 1 if (cyclic and frame_count > 1) else frame_count
 
             plane = _make_plane(
                 name=layer_name,
                 first_png_path=first_png,
-                frame_count=frame_count,
+                frame_duration=max(1, frame_duration),
                 cyclic=cyclic,
                 location=(0.0, y_offset, 0.0),
             )
@@ -208,9 +247,31 @@ class PG_OT_Import(Operator):
             self.report({'ERROR'}, "No titles/, patterns/ or dots/ folder with PNGs found.")
             return {'CANCELLED'}
 
+        # Apply the project-level settings the exporter declared so the scene
+        # matches the footage without the user guessing: fps for real-time /
+        # audio playback, frame step for the "on 2s" stepped render, and a
+        # frame range that covers the longest sequence.
+        notes = []
+        if manifest:
+            fps = manifest.get("fps")
+            if fps:
+                context.scene.render.fps = int(round(fps))
+                context.scene.render.fps_base = 1.0
+                notes.append(f"{int(round(fps))}fps")
+            step = manifest.get("frameStep")
+            if step:
+                context.scene.frame_step = int(step)
+                notes.append(f"step {int(step)}")
+            if max_files:
+                context.scene.frame_start = 1
+                context.scene.frame_end = max_files
+                notes.append(f"range 1-{max_files}")
+
         summary = ", ".join(f"{name} ({n})" for name, n in created)
         if missing:
             summary += f" — missing: {', '.join(missing)}"
+        if notes:
+            summary += f" | scene set to {', '.join(notes)}"
         self.report({'INFO'}, f"Imported: {summary}")
         return {'FINISHED'}
 
