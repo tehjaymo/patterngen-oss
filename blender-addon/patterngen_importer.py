@@ -24,6 +24,8 @@ LAYERS = [
 ]
 
 TARGET_SCALE = 6.0
+DEFAULT_OUTPUT_RESOLUTION = (1280, 720)
+DEFAULT_OUTPUT_FILE_TYPE = "JPG"
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +71,34 @@ def _find_layer_folder(root, layer_name):
         if _list_pngs(folder):
             return folder
     return None
+
+
+def _apply_output_settings(scene, output_spec):
+    """Apply Blender render output settings declared by the export manifest."""
+    if not isinstance(output_spec, dict):
+        return []
+
+    notes = []
+    resolution = output_spec.get("resolution")
+    if isinstance(resolution, (list, tuple)) and len(resolution) >= 2:
+        try:
+            width = int(resolution[0])
+            height = int(resolution[1])
+        except (TypeError, ValueError):
+            width = height = 0
+        if width > 0 and height > 0:
+            scene.render.resolution_x = width
+            scene.render.resolution_y = height
+            scene.render.resolution_percentage = 100
+            notes.append(f"{width}x{height}")
+
+    file_type = str(output_spec.get("fileType", "")).upper()
+    if file_type in {"JPG", "JPEG"}:
+        scene.render.image_settings.file_format = 'JPEG'
+        scene.render.image_settings.color_mode = 'RGB'
+        notes.append("JPG")
+
+    return notes
 
 
 def _make_plane(name, first_png_path, frame_duration, cyclic, location):
@@ -128,10 +158,21 @@ def _make_plane(name, first_png_path, frame_duration, cyclic, location):
     # the extra trailing file absorbs that overrun so the seam never requests a
     # missing frame (which would render as the magenta placeholder).
     iu.frame_duration = max(1, frame_duration)
-    iu.frame_start = 0
+    # Keep the sequence aligned with the imported scene range, which starts at
+    # frame 1. Starting the image sequence at 0 shifts the lookup by one frame
+    # and can make Blender request one PNG past the end on the final frame.
+    iu.frame_start = 1
     iu.frame_offset = 0
     iu.use_cyclic = cyclic
     iu.use_auto_refresh = True
+    if not cyclic:
+        # Motion-graphics shots often keep the camera moving after the reveal
+        # sequence has finished. Clamp non-cyclic layers to their final PNG
+        # instead of letting Blender request frames beyond the exported files,
+        # which displays as a magenta missing-image placeholder.
+        driver = iu.driver_add("frame_offset").driver
+        driver.type = 'SCRIPTED'
+        driver.expression = f"min(0, {max(1, frame_duration)} - frame)"
 
     nt.links.new(tex.outputs['Color'], bsdf.inputs['Base Color'])
     nt.links.new(tex.outputs['Alpha'], bsdf.inputs['Alpha'])
@@ -180,7 +221,8 @@ class PG_Properties(PropertyGroup):
     start_frame: IntProperty(
         name="Start Frame",
         description="Timeline frame where the image sequence begins playing",
-        default=0,
+        default=1,
+        min=1,
     )
 
 
@@ -266,6 +308,13 @@ class PG_OT_Import(Operator):
                 context.scene.frame_start = 1
                 context.scene.frame_end = max_files
                 notes.append(f"range 1-{max_files}")
+            output_spec = manifest.get("output", {
+                "resolution": DEFAULT_OUTPUT_RESOLUTION,
+                "fileType": DEFAULT_OUTPUT_FILE_TYPE,
+            })
+            output_notes = _apply_output_settings(context.scene, output_spec)
+            if output_notes:
+                notes.append("output " + " ".join(output_notes))
 
         summary = ", ".join(f"{name} ({n})" for name, n in created)
         if missing:
@@ -287,7 +336,8 @@ class PG_OT_ApplyStartFrame(Operator):
 
     def execute(self, context):
         props = context.scene.patterngen_props
-        start = int(props.start_frame)
+        start = max(1, int(props.start_frame))
+        props.start_frame = start
 
         targets = [o for o in context.selected_objects if o.type == 'MESH']
         if not targets:

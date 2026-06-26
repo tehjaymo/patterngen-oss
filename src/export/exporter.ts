@@ -159,6 +159,10 @@ export async function exportAll(options: ExportOptions) {
     // halving render time while the scene still scrubs in real time at `fps`.
     frameStep: 2,
     resolution: [CANVAS_W * EXPORT_SCALE, CANVAS_H * EXPORT_SCALE],
+    output: {
+      resolution: [1280, 720],
+      fileType: 'JPG',
+    },
     layers: Object.fromEntries(
       layers.map((layer, i) => {
         const files = layerFrameCounts[i];

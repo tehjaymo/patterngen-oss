@@ -50,7 +50,7 @@ Image Texture (SEQUENCE, auto-refresh on)
 
 Image sequence settings applied to every layer:
 
-- **Start Frame** — `0`
+- **Start Frame** — `1`
 - **Frames** — number of PNGs found in the folder (one fewer for the cyclic
   `dots` layer, so the loop wraps cleanly — see note below)
 - **Offset** — `0`
@@ -70,10 +70,15 @@ matches the footage, instead of leaving you to guess:
 | -------------- | ---------------------- |
 | `fps`          | Sets the scene/render frame rate (e.g. `30`) so you can animate and scrub in real time against an audio track. |
 | `frameStep`    | Sets **Output ▸ Frame Range ▸ Step** (e.g. `2`). Rendering then advances 2 frames per rendered frame — the "**on 2s**" look at roughly **half the render time** — while interactive playback stays smooth at the full fps. |
+| `output.resolution` | Sets Blender's render resolution to `1280 × 720` at 100%. |
+| `output.fileType` | Sets Blender's output file format to JPG/RGB. |
 | per-layer `frameDuration` | The image-sequence **Frames** value for each plane (one less than the file count for the cyclic `dots` layer; see note below). |
 | layer `loop`   | Whether that layer's sequence is **Cyclic**. |
 
 The importer also sets the scene frame range to cover the longest sequence.
+If you extend the timeline for a longer camera move, the non-cyclic title and
+pattern layers hold on their final PNG after the reveal finishes, while the
+cyclic `dots` layer keeps looping.
 If a `manifest.json` is missing (older exports), the add-on falls back to
 counting PNGs and uses sensible defaults, leaving fps/step alone.
 
