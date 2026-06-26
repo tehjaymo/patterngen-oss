@@ -76,10 +76,11 @@ export async function exportLayer(
   const zip = new JSZip();
 
   for (let frame = 0; frame < totalFrames; frame++) {
-    const ratio = totalFrames > 1 ? frame / (totalFrames - 1) : 1;
-
     if (layer === 'dots') {
-      const loopMs = ratio * DOT_LOOP_MS;
+      // Looping layer: map frames across [0, DOT_LOOP_MS) exclusive so the last
+      // frame is one step before the wrap (not identical to frame 0). This keeps
+      // a clean N-frame loop with no duplicate seam.
+      const loopMs = (frame / totalFrames) * DOT_LOOP_MS;
       const dotOpacities = evaluateDotsLoop(loopMs, dots);
       const state = {
         t: 0,
@@ -94,6 +95,8 @@ export async function exportLayer(
       };
       await renderFrame(ctx, state, titles, patterns, squares, letters, dots, patternDefs, EXPORT_SCALE, layer);
     } else {
+      // Non-looping layers reach progress = 1 on the final frame.
+      const ratio = totalFrames > 1 ? frame / (totalFrames - 1) : 1;
       const elapsedMs = layerFrameToElapsed(layer, ratio, durationMs);
       const state = evaluate(elapsedMs, durationMs, titles, patterns, squares, letters, dots, easing, stagger);
       await renderFrame(ctx, state, titles, patterns, squares, letters, dots, patternDefs, EXPORT_SCALE, layer);
@@ -143,6 +146,33 @@ export async function exportAll(options: ExportOptions) {
       folder.file(path, file.async('blob'));
     });
   }
+
+  // Self-describing manifest: the Blender add-on reads this and configures the
+  // scene to match the footage (fps for real-time / audio sync, frame step for
+  // the "on 2s" stepped render, and the per-layer image-sequence duration) so
+  // neither side has to guess. Single source of truth for the export contract.
+  const manifest = {
+    version: 1,
+    generator: 'patterngen',
+    fps: FPS,
+    // Render "on 2s": Blender advances 2 timeline frames per rendered frame,
+    // halving render time while the scene still scrubs in real time at `fps`.
+    frameStep: 2,
+    resolution: [CANVAS_W * EXPORT_SCALE, CANVAS_H * EXPORT_SCALE],
+    layers: Object.fromEntries(
+      layers.map((layer, i) => {
+        const files = layerFrameCounts[i];
+        const loop = layer === 'dots';
+        // A cyclic layer must play one fewer frame than it has files on disk:
+        // Blender's cyclic resolver overruns the loop by one at the wrap, and
+        // the extra trailing file absorbs that overrun so the seam never
+        // requests a missing frame (which renders as the magenta placeholder).
+        const frameDuration = loop ? Math.max(1, files - 1) : files;
+        return [layer, { files, loop, frameDuration }];
+      }),
+    ),
+  };
+  masterZip.file('manifest.json', JSON.stringify(manifest, null, 2));
 
   const blob = await masterZip.generateAsync({ type: 'blob' });
   saveAs(blob, `${prefix}pattern_gen.zip`);

@@ -137,6 +137,7 @@ Clicking **EXPORT** renders three 4× resolution PNG sequences packaged in a ZIP
 
 ```
 scene_pattern_gen.zip
+  manifest.json
   titles/
     scene_titles_00000.png
     scene_titles_00001.png
@@ -150,6 +151,12 @@ scene_pattern_gen.zip
 ```
 
 Each layer has a transparent background so they can be composited independently.
+
+Sequences are rendered at **30 fps** (one PNG per timeline frame). The bundled
+`manifest.json` declares the export contract — fps, frame step, output
+resolution, and the per-layer image-sequence settings — so the Blender add-on
+can configure the scene to match without guessing. See the add-on README for
+how it uses the manifest (including the "on 2s" stepped-render workflow).
 
 Changing layer motion in the web app changes the rendered PNG frames only. The exported folder structure remains compatible with the Blender add-on.
 
